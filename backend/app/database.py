@@ -5,7 +5,9 @@ from .config import DATABASE_URL
 
 database_url = DATABASE_URL
 if database_url.startswith("postgres://"):
-    database_url = "postgresql://" + database_url[len("postgres://"):]
+    database_url = "postgresql+psycopg2://" + database_url[len("postgres://"):]
+elif database_url.startswith("postgresql://"):
+    database_url = "postgresql+psycopg2://" + database_url[len("postgresql://"):]
 
 connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
 engine = create_engine(database_url, connect_args=connect_args, future=True, pool_pre_ping=True)
