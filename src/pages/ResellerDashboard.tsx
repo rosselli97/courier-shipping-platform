@@ -180,7 +180,7 @@ export default function ResellerDashboard() {
           title="Le tue spedizioni"
           data={shipments.isError ? undefined : shipments.data}
           isPending={shipments.isPending}
-          labelBase="/api/reseller"
+          labelBase="/reseller"
           tid="reseller"
         />
       </div>

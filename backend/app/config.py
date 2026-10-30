@@ -16,5 +16,14 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", "noreply@muvpack.it")
 
 COOKIE_SECURE = os.getenv("MUVPACK_COOKIE_SECURE", "0") == "1"
+SESSION_SAMESITE = os.getenv("MUVPACK_SESSION_SAMESITE", "lax").lower()
+if SESSION_SAMESITE not in ("lax", "strict", "none"):
+    SESSION_SAMESITE = "lax"
+
+CORS_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()]
+CORS_ORIGIN_REGEX = os.getenv(
+    "CORS_ORIGIN_REGEX",
+    r"https://([a-z0-9-]+\.)*onrender\.com|https://([a-z0-9-]+\.)*vercel\.app|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?",
+)
 
 TOPUP_PACKAGES = (50, 100, 250, 500)

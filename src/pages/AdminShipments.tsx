@@ -29,7 +29,7 @@ export default function AdminShipments() {
         </Link>
       }
     >
-      <ShipmentsTable title="Spedizioni del super admin" data={data} isPending={shipments.isPending} labelBase="/api/admin" tid="admin" priceLabel="Costo" />
+      <ShipmentsTable title="Spedizioni del super admin" data={data} isPending={shipments.isPending} labelBase="/admin" tid="admin" priceLabel="Costo" />
     </DashboardShell>
   );
 }

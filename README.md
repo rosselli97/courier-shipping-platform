@@ -4,8 +4,25 @@ Piattaforma B2B per spedizioni con Poste Italiane, BRT e DHL: preventivo multi-c
 
 ## Struttura
 
-- Root: frontend React 19 + Vite + Tailwind 4 (deploy su Vercel)
-- `backend/`: API FastAPI + SQLite (deploy separato)
+- Root: frontend React 19 + Vite + Tailwind 4
+- `backend/`: API FastAPI + SQLAlchemy (SQLite in locale, PostgreSQL su Render)
+- `render.yaml`: Blueprint con frontend static site, API web service e database Postgres
+
+## Deploy su Render (tutto in un click)
+
+1. Apri https://render.com/deploy?repo=https://github.com/rosselli97/courier-shipping-platform
+2. Autorizza il repository e conferma il Blueprint.
+3. Render crea:
+   - `muvpack-api` → https://muvpack-api.onrender.com
+   - `muvpack-web` → https://muvpack-web.onrender.com
+   - `muvpack-db` (Postgres free)
+
+Se Render assegna nomi diversi (perché gia occupati), aggiorna in `render.yaml`:
+- `VITE_API_BASE` del sito statico con l'URL pubblico della API
+- `CORS_ORIGINS` della API con l'URL pubblico del sito
+poi rilancia il Blueprint.
+
+Il database free di Render scade 30 giorni dopo la creazione: per uso continuativo passa a un piano a pagamento o usa un Postgres esterno.
 
 ## Sviluppo locale
 
@@ -25,17 +42,23 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8001
 ```
 
-## Deploy
+## Variabili principali
 
-Il frontend è pronto per Vercel (`vercel.json` include il rewrite SPA per le rotte client-side).
-
-Il backend FastAPI non gira su Vercel: pubblicalo su un host Python (Render, Railway, Fly.io, ecc.) e imposta sul progetto Vercel la variabile:
+Frontend (build time):
 
 ```
-VITE_API_BASE=https://tuo-backend.example.com
+VITE_API_BASE=https://muvpack-api.onrender.com
 ```
 
-Senza `VITE_API_BASE` il frontend chiama `/api` sullo stesso dominio.
+Backend:
+
+```
+MUVPACK_SECRET_KEY=...
+MUVPACK_DATABASE_URL=postgresql://...
+MUVPACK_COOKIE_SECURE=1
+MUVPACK_SESSION_SAMESITE=none
+CORS_ORIGINS=https://muvpack-web.onrender.com
+```
 
 ## Account demo
 

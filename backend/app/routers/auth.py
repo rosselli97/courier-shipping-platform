@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..config import COOKIE_SECURE, SESSION_COOKIE, SESSION_MAX_AGE
+from ..config import COOKIE_SECURE, SESSION_COOKIE, SESSION_MAX_AGE, SESSION_SAMESITE
 from ..database import get_db
 from ..deps import get_optional_user
 from ..models import User
@@ -25,7 +25,7 @@ def _set_session(response: Response, user: User) -> None:
         value=create_session_token(user.id),
         max_age=SESSION_MAX_AGE,
         httponly=True,
-        samesite="lax",
+        samesite=SESSION_SAMESITE,
         secure=COOKIE_SECURE,
         path="/",
     )
@@ -80,5 +80,6 @@ def signup(body: SignupRequest, response: Response, db: Session = Depends(get_db
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(response: Response):
-    response.delete_cookie(SESSION_COOKIE, path="/")
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    response.delete_cookie(SESSION_COOKIE, path="/", samesite=SESSION_SAMESITE, secure=COOKIE_SECURE)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response

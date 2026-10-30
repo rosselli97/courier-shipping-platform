@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 
 from openpyxl import Workbook
 from reportlab.lib import colors
@@ -166,9 +166,9 @@ def statement_xlsx(user: User, month: str, txs: list[WalletTx]) -> bytes:
 
 
 def month_bounds(month: str) -> tuple[datetime, datetime]:
-    start = datetime.strptime(month, "%Y-%m")
+    start = datetime.strptime(month, "%Y-%m").replace(tzinfo=timezone.utc)
     if start.month == 12:
-        end = datetime(start.year + 1, 1, 1)
+        end = datetime(start.year + 1, 1, 1, tzinfo=timezone.utc)
     else:
-        end = datetime(start.year, start.month + 1, 1)
+        end = datetime(start.year, start.month + 1, 1, tzinfo=timezone.utc)
     return start, end

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { buttonVariants } from "@/components/ui/button";
-import { apiGet } from "@/lib/api";
+import { API_BASE, apiGet } from "@/lib/api";
 import { dateTimeIt, eur } from "@/lib/format";
 import type { WalletTx } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -109,7 +109,7 @@ export default function WalletHistorySheet({ open, onOpenChange }: { open: boole
                   </SelectContent>
                 </Select>
                 <a
-                  href={`/api/reseller/wallet/statement?month=${selectedMonth}&format=pdf`}
+                  href={`${API_BASE}/reseller/wallet/statement?month=${selectedMonth}&format=pdf`}
                   download
                   data-testid="wallet-statement-download-pdf"
                   onClick={() => toast.success(`Estratto conto ${monthLong(selectedMonth)} (PDF) in download`)}
@@ -118,7 +118,7 @@ export default function WalletHistorySheet({ open, onOpenChange }: { open: boole
                   <Download className="size-3.5" /> PDF
                 </a>
                 <a
-                  href={`/api/reseller/wallet/statement?month=${selectedMonth}&format=xlsx`}
+                  href={`${API_BASE}/reseller/wallet/statement?month=${selectedMonth}&format=xlsx`}
                   download
                   data-testid="wallet-statement-download-xlsx"
                   onClick={() => toast.success(`Estratto conto ${monthLong(selectedMonth)} (Excel) in download`)}

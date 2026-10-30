@@ -1,7 +1,9 @@
 // Typed fetch layer over the FastAPI backend. Locally the relative "/api" prefix is proxied
 // by Vite to :8001; in production set VITE_API_BASE to the backend origin (e.g. https://api.example.com).
-const API_ORIGIN = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? "";
-const BASE = `${API_ORIGIN}/api`;
+const RAW_API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.trim().replace(/\/$/, "") ?? "";
+const API_ORIGIN = RAW_API_BASE && !/^https?:\/\//i.test(RAW_API_BASE) ? `https://${RAW_API_BASE}` : RAW_API_BASE;
+export const API_BASE = `${API_ORIGIN}/api`;
+const BASE = API_BASE;
 
 // Fields are declared, not constructor parameter properties: tsconfig sets
 // erasableSyntaxOnly, which rejects `constructor(readonly status: number)`.
@@ -23,6 +25,7 @@ async function request<T>(method: string, path: string, body?: JsonBody): Promis
   // Auth rides the httpOnly session cookie automatically — never add auth headers here.
   const res = await fetch(`${BASE}${path}`, {
     method,
+    credentials: "include",
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });

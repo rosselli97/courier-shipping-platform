@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { API_BASE } from "@/lib/api";
 import { dateIt, eur, STATUS_LABEL } from "@/lib/format";
 import type { ResellerShipment, ShipmentStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,7 @@ interface Props {
   title: string;
   data: ResellerShipment[] | undefined;
   isPending: boolean;
-  /** "/api/reseller" or "/api/admin" — label endpoints of the owner */
+  /** "/reseller" or "/admin" — label endpoints of the owner */
   labelBase: string;
   /** data-testid prefix, e.g. "reseller" or "admin" */
   tid: string;
@@ -55,7 +56,7 @@ export default function ShipmentsTable({ title, data, isPending, labelBase, tid,
       else next.add(id);
       return next;
     });
-  const bulkHref = `${labelBase}/labels?ids=${[...selected].slice(0, 100).join(",")}`;
+  const bulkHref = `${API_BASE}${labelBase}/labels?ids=${[...selected].slice(0, 100).join(",")}`;
 
   return (
     <section className="rounded-2xl border bg-card shadow-sm">
@@ -159,7 +160,7 @@ export default function ShipmentsTable({ title, data, isPending, labelBase, tid,
               <TableCell className="text-right font-semibold text-navy">{eur(r.price)}</TableCell>
               <TableCell className="pr-5 text-right">
                 <a
-                  href={`${labelBase}/shipments/${r.id}/label`}
+                  href={`${API_BASE}${labelBase}/shipments/${r.id}/label`}
                   download={`etichetta-${r.tracking_code}.pdf`}
                   data-testid={`${tid}-download-pdf-label-button`}
                   onClick={() => toast.success("Download etichetta PDF avviato")}
