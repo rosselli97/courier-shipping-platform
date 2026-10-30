@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -10,11 +12,25 @@ from .database import Base, engine
 from .routers import admin, auth, contacts, payments, quotes, reseller, tickets, tracking
 from .seed import seed
 
+logger = logging.getLogger("muvpack")
+
+
+def init_database(attempts: int = 30) -> None:
+    for attempt in range(1, attempts + 1):
+        try:
+            Base.metadata.create_all(bind=engine)
+            seed()
+            return
+        except Exception:
+            if attempt == attempts:
+                raise
+            logger.exception("Database not ready (attempt %s/%s), retrying in 2s", attempt, attempts)
+            time.sleep(2)
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    seed()
+    init_database()
     yield
 
 
