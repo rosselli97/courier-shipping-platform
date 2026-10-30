@@ -1,0 +1,60 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Info } from "lucide-react";
+import DashboardShell from "@/components/DashboardShell";
+import CalculatorForm, { type CalcValues } from "@/components/CalculatorForm";
+import CourierSelectionList from "@/components/couriers/CourierSelectionList";
+import ShipmentDialog from "@/components/ShipmentDialog";
+import { apiPost } from "@/lib/api";
+import type { CourierQuote, QuoteRequest, QuoteResponse } from "@/lib/types";
+
+const toReq = (v: CalcValues): QuoteRequest => ({
+  origin_cap: v.o, dest_cap: v.d, weight_kg: Number(v.w), length_cm: Number(v.l), width_cm: Number(v.wi), height_cm: Number(v.h),
+  is_pallet: v.p === "1",
+});
+
+export default function AdminNewShipment() {
+  const [req, setReq] = useState<QuoteRequest | null>(null);
+  const [selected, setSelected] = useState<CourierQuote | null>(null);
+  const [contactId, setContactId] = useState<string | null>(null);
+  const quote = useQuery({
+    queryKey: ["quote", "admin", req],
+    queryFn: () => apiPost<QuoteResponse>("/quote", req),
+    enabled: req !== null,
+    retry: false,
+  });
+
+  return (
+    <DashboardShell role="admin" title="Nuova spedizione" subtitle="Spedizioni interne MUVPACK: addebitate a costo corriere, senza portafoglio.">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,440px)_1fr] xl:items-start">
+        <CalculatorForm onSubmit={(v, c) => { setReq(toReq(v)); setContactId(c); }} />
+        <div data-testid="admin-new-shipment-results">
+          {!req && (
+            <div className="flex items-start gap-3 rounded-2xl border border-dashed bg-card p-6 text-sm text-muted-foreground">
+              <Info className="mt-0.5 size-4 shrink-0 text-brand" />
+              Inserisci CAP, peso e dimensioni e premi «Confronta corrieri»: vedrai il costo reale di Poste Italiane, BRT e DHL senza ricarico.
+            </div>
+          )}
+          {req && quote.isPending && (
+            <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-40 animate-pulse rounded-2xl bg-slate-200/60" />)}</div>
+          )}
+          {req && quote.isError && (
+            <div data-testid="admin-quote-error" className="rounded-2xl border border-dashed bg-card p-6 text-center text-sm text-muted-foreground">
+              Impossibile calcolare la tariffa. Controlla i dati del pacco.
+            </div>
+          )}
+          {req && quote.data && !quote.isError && (
+            <>
+              <p className="mb-3 text-sm text-muted-foreground">
+                {quote.data.origin_city} → {quote.data.dest_city} · peso tassabile <b className="text-navy">{quote.data.billable_weight_kg} kg</b> · prezzi a costo
+                {quote.data.is_pallet && <> · <b className="text-navy">Pallet, {quote.data.pallet_zone}</b></>}
+              </p>
+              <CourierSelectionList quotes={quote.data.quotes} onSelect={setSelected} />
+            </>
+          )}
+        </div>
+      </div>
+      {req && <ShipmentDialog quote={selected} request={req} role="admin" prefillContactId={contactId} onClose={() => setSelected(null)} />}
+    </DashboardShell>
+  );
+}

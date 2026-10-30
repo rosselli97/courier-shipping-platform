@@ -1,23 +1,16 @@
 {
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
   "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
-    },
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "types": ["node"],
-    "strict": true,
-    "noFallthroughCasesInSwitch": true
-  },
-  "include": ["src", "vite.config.ts"]
+      "@/*": ["./src/*"],
+      "lucide-react": ["./src/lib/lucide-react.tsx"],
+      "lucide-react-upstream": ["./node_modules/lucide-react/dist/lucide-react.d.ts"],
+      "recharts": ["./src/lib/recharts.tsx"],
+      "recharts-upstream": ["./node_modules/recharts/types/index.d.ts"]
+    }
+  }
 }
