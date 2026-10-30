@@ -1,0 +1,10 @@
+{
+  "description": "Compare courier rates, calculate shipping costs, and track packages, while business resellers manage shipments and labels and admins oversee finances and clients.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
