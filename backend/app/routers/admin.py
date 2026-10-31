@@ -38,7 +38,7 @@ from ..schemas import (
 )
 from ..security import hash_password
 from ..serializers import client_row, shipment_out
-from ..shipments import advance_tracking, create_shipment
+from ..shipments import advance_tracking, create_shipment, is_travelbox_shipment
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -318,6 +318,8 @@ def create_admin_shipment(body: ShipmentCreate, user: User = Depends(require_adm
 @router.get("/shipments/{shipment_id}/label")
 def admin_label(shipment_id: str, _: User = Depends(require_admin), db: Session = Depends(get_db)):
     shipment = _admin_shipment(db, shipment_id)
+    if is_travelbox_shipment(shipment):
+        raise HTTPException(status_code=409, detail="Etichetta disponibile sul portale TravelBox")
     return Response(
         content=labels_pdf([shipment]),
         media_type="application/pdf",
@@ -329,7 +331,9 @@ def admin_label(shipment_id: str, _: User = Depends(require_admin), db: Session 
 def admin_labels(ids: str = Query(...), _: User = Depends(require_admin), db: Session = Depends(get_db)):
     wanted = [part for part in ids.split(",") if part][:100]
     shipments = [
-        s for s in (db.get(Shipment, part) for part in wanted) if s is not None and s.is_admin_shipment
+        s
+        for s in (db.get(Shipment, part) for part in wanted)
+        if s is not None and s.is_admin_shipment and not is_travelbox_shipment(s)
     ]
     if not shipments:
         raise HTTPException(status_code=404, detail="Nessuna etichetta trovata")

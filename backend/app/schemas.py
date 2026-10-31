@@ -131,6 +131,7 @@ class ResellerShipment(BaseModel):
     created_at: str
     email_status: EmailStatus
     is_pallet: bool
+    source: Literal["local", "travelbox"] = "local"
 
 
 class TrackingEventOut(BaseModel):

@@ -96,6 +96,7 @@ export interface ResellerShipment {
   created_at: string;
   email_status: EmailStatus;
   is_pallet: boolean;
+  source?: "local" | "travelbox";
 }
 
 export type EmailStatus = "none" | "pending" | "sent" | "failed";

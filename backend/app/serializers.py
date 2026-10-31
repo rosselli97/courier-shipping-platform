@@ -48,6 +48,7 @@ def shipment_out(shipment: Shipment) -> ResellerShipment:
         created_at=iso(shipment.created_at),
         email_status=shipment.email_status,  # type: ignore[arg-type]
         is_pallet=shipment.is_pallet,
+        source="travelbox" if shipment.tracking_code.upper().startswith("TBC-") else "local",
     )
 
 

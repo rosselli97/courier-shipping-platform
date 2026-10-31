@@ -12,7 +12,7 @@ from ..models import Shipment, User, WalletTx
 from ..pdfs import labels_pdf, month_bounds, statement_pdf, statement_xlsx
 from ..schemas import MonthStat, ResellerShipment, ResellerSummary, ShipmentCreate, WalletTxOut
 from ..serializers import shipment_out, wallet_tx_out
-from ..shipments import advance_tracking, create_shipment
+from ..shipments import advance_tracking, create_shipment, is_travelbox_shipment
 
 router = APIRouter(prefix="/reseller", tags=["reseller"])
 
@@ -134,6 +134,8 @@ def wallet_statement(
 @router.get("/shipments/{shipment_id}/label")
 def shipment_label(shipment_id: str, user: User = Depends(require_reseller), db: Session = Depends(get_db)):
     shipment = _own_shipment(db, shipment_id, user)
+    if is_travelbox_shipment(shipment):
+        raise HTTPException(status_code=409, detail="Etichetta disponibile sul portale TravelBox")
     return Response(
         content=labels_pdf([shipment]),
         media_type="application/pdf",
@@ -147,7 +149,10 @@ def bulk_labels(ids: str = Query(...), user: User = Depends(require_reseller), d
     shipments = [
         s
         for s in (db.get(Shipment, part) for part in wanted)
-        if s is not None and s.owner_id == user.id and not s.is_admin_shipment
+        if s is not None
+        and s.owner_id == user.id
+        and not s.is_admin_shipment
+        and not is_travelbox_shipment(s)
     ]
     if not shipments:
         raise HTTPException(status_code=404, detail="Nessuna etichetta trovata")

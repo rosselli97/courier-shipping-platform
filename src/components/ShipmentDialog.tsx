@@ -114,6 +114,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
     onSuccess: (result) => {
       setTbResult(result);
       qc.invalidateQueries({ queryKey: ["tb"] });
+      qc.invalidateQueries({ queryKey: [isAdmin ? "admin" : "reseller"] });
       toast.success(`Spedizione ${result.reference ?? ""} aggiunta al carrello TravelBox`, {
         description: "Nessun pagamento eseguito: completa il checkout sul portale.",
       });

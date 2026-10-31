@@ -6,11 +6,15 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from travelbox.models import CreateShipmentResult
+
 from .geo import city_for_cap
 from .models import Contact, Shipment, TrackingEvent, User, WalletTx
 from .notify import send_shipment_email
-from .pricing import COURIERS, quote_for_courier
-from .schemas import ShipmentCreate
+from .pricing import COURIERS, billable_weight, quote_for_courier
+from .schemas import ShipmentCreate, TravelBoxCheckoutRequest
+
+TRAVELBOX_PREFIX = "TBC-"
 
 STAGES = [
     (timedelta(hours=0), "creata", "Spedizione creata", "origin"),
@@ -137,7 +141,112 @@ def create_shipment(db: Session, user: User, body: ShipmentCreate, as_admin: boo
     return shipment
 
 
+def is_travelbox_shipment(shipment: Shipment) -> bool:
+    return shipment.tracking_code.upper().startswith(TRAVELBOX_PREFIX)
+
+
+def _money_amount(money) -> float:
+    if money is None:
+        return 0.0
+    try:
+        return round(float(money.amount or 0), 2)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _travelbox_courier(value: str | None) -> str:
+    text = (value or "").upper()
+    if "POSTE" in text:
+        return "poste"
+    if "BRT" in text or "BARTOLINI" in text:
+        return "brt"
+    if "DHL" in text:
+        return "dhl"
+    if "FEDEX" in text:
+        return "fedex"
+    if "UPS" in text:
+        return "ups"
+    return "other"
+
+
+def record_travelbox_shipment(
+    db: Session,
+    user: User,
+    body: TravelBoxCheckoutRequest,
+    result: CreateShipmentResult,
+) -> Shipment | None:
+    """Registra nell'elenco MUVPACK una spedizione creata su TravelBox.
+
+    Il codice di tracking locale coincide con il riferimento TravelBox
+    (`TBC-...`), cosi' la spedizione compare subito in "Spedizioni effettuate"
+    e nella pagina di tracking. Nessun movimento di portafoglio viene creato:
+    il pagamento avviene sul portale TravelBox.
+    """
+    remote = result.shipment
+    if remote is None or not remote.reference:
+        return None
+
+    reference = remote.reference.strip().upper()
+    existing = db.scalar(select(Shipment).where(Shipment.tracking_code == reference))
+    if existing is not None:
+        return existing
+
+    offer = result.offer
+    price = _money_amount(offer.price if offer else None) or _money_amount(remote.price)
+    net = _money_amount(offer.net_price if offer else None)
+    tax = _money_amount(offer.tax if offer else None)
+    base_cost = net if net > 0 else price
+    billable = (
+        float(offer.weight_kg)
+        if offer is not None and offer.weight_kg
+        else billable_weight(body)[0]
+    )
+
+    shipment = Shipment(
+        tracking_code=reference,
+        owner_id=user.id,
+        is_admin_shipment=user.role == "admin",
+        courier=_travelbox_courier((offer.carrier if offer else None) or remote.carrier),
+        origin_cap=body.origin_cap,
+        origin_city=city_for_cap(body.origin_cap),
+        dest_cap=body.dest_cap,
+        dest_city=city_for_cap(body.dest_cap),
+        recipient_name=body.recipient_name.strip(),
+        recipient_address=body.recipient_address.strip(),
+        recipient_email=body.recipient_email,
+        weight_kg=body.weight_kg,
+        length_cm=body.length_cm,
+        width_cm=body.width_cm,
+        height_cm=body.height_cm,
+        billable_weight_kg=billable,
+        is_pallet=body.is_pallet,
+        base_cost=base_cost,
+        fuel_surcharge=tax,
+        price=price,
+        status="creata",
+        email_status="none",
+    )
+    db.add(shipment)
+    db.flush()
+    db.add(
+        TrackingEvent(
+            shipment_id=shipment.id,
+            status="creata",
+            description=f"Spedizione creata su TravelBox ({reference})",
+            location=shipment.origin_city,
+            timestamp=datetime.now(timezone.utc),
+        )
+    )
+    db.commit()
+    db.refresh(shipment)
+    return shipment
+
+
 def advance_tracking(db: Session, shipment: Shipment) -> Shipment:
+    # Le spedizioni TravelBox hanno il tracking reale sul portale: non va
+    # simulato localmente.
+    if is_travelbox_shipment(shipment):
+        return shipment
     if shipment.status == "giacenza":
         return shipment
     created = ensure_utc(shipment.created_at)

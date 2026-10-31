@@ -41,12 +41,13 @@ export default function ShipmentsTable({ title, data, isPending, labelBase, tid,
     );
   }, [data, search, status]);
 
-  const allVisibleSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const selectableRows = rows.filter((r) => r.source !== "travelbox");
+  const allVisibleSelected = selectableRows.length > 0 && selectableRows.every((r) => selected.has(r.id));
   const toggleAll = () =>
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allVisibleSelected) rows.forEach((r) => next.delete(r.id));
-      else rows.slice(0, 100).forEach((r) => next.add(r.id));
+      if (allVisibleSelected) selectableRows.forEach((r) => next.delete(r.id));
+      else selectableRows.slice(0, 100).forEach((r) => next.add(r.id));
       return next;
     });
   const toggleOne = (id: string) =>
@@ -111,7 +112,7 @@ export default function ShipmentsTable({ title, data, isPending, labelBase, tid,
         <TableHeader>
           <TableRow>
             <TableHead className="w-10 pl-5">
-              <Checkbox data-testid={`${tid}-select-all-checkbox`} aria-label="Seleziona tutte" checked={allVisibleSelected} onCheckedChange={toggleAll} />
+              <Checkbox data-testid={`${tid}-select-all-checkbox`} aria-label="Seleziona tutte" checked={allVisibleSelected} disabled={selectableRows.length === 0} onCheckedChange={toggleAll} />
             </TableHead>
             <TableHead>Codice</TableHead>
             <TableHead>Corriere</TableHead>
@@ -133,12 +134,15 @@ export default function ShipmentsTable({ title, data, isPending, labelBase, tid,
           {rows.map((r) => (
             <TableRow key={r.id} data-testid={`${tid}-shipment-row-${r.tracking_code}`} data-selected={selected.has(r.id) || undefined} className="transition-colors hover:bg-muted/50 data-[selected]:bg-brand-soft/60">
               <TableCell className="pl-5">
-                <Checkbox data-testid={`${tid}-row-checkbox`} aria-label={`Seleziona ${r.tracking_code}`} checked={selected.has(r.id)} onCheckedChange={() => toggleOne(r.id)} />
+                <Checkbox data-testid={`${tid}-row-checkbox`} aria-label={`Seleziona ${r.tracking_code}`} checked={selected.has(r.id)} disabled={r.source === "travelbox"} onCheckedChange={() => toggleOne(r.id)} />
               </TableCell>
               <TableCell>
                 <Link to={`/traccia/${r.tracking_code}`} data-testid={`${tid}-shipment-track-link`} className="font-mono text-sm font-semibold text-navy hover:text-brand">
                   {r.tracking_code}
                 </Link>
+                {r.source === "travelbox" && (
+                  <span data-testid={`${tid}-travelbox-badge`} className="ml-2 rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">TravelBox</span>
+                )}
               </TableCell>
               <TableCell>
                 <span className="inline-flex items-center gap-1.5">
@@ -159,15 +163,19 @@ export default function ShipmentsTable({ title, data, isPending, labelBase, tid,
               <TableCell><StatusBadge status={r.status as ShipmentStatus} /></TableCell>
               <TableCell className="text-right font-semibold text-navy">{eur(r.price)}</TableCell>
               <TableCell className="pr-5 text-right">
-                <a
-                  href={`${API_BASE}${labelBase}/shipments/${r.id}/label`}
-                  download={`etichetta-${r.tracking_code}.pdf`}
-                  data-testid={`${tid}-download-pdf-label-button`}
-                  onClick={() => toast.success("Download etichetta PDF avviato")}
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5 hover:border-brand hover:text-brand")}
-                >
-                  <Download className="size-3.5" /> PDF
-                </a>
+                {r.source === "travelbox" ? (
+                  <span data-testid={`${tid}-travelbox-label-hint`} className="text-xs text-muted-foreground">Su TravelBox</span>
+                ) : (
+                  <a
+                    href={`${API_BASE}${labelBase}/shipments/${r.id}/label`}
+                    download={`etichetta-${r.tracking_code}.pdf`}
+                    data-testid={`${tid}-download-pdf-label-button`}
+                    onClick={() => toast.success("Download etichetta PDF avviato")}
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5 hover:border-brand hover:text-brand")}
+                  >
+                    <Download className="size-3.5" /> PDF
+                  </a>
+                )}
               </TableCell>
             </TableRow>
           ))}

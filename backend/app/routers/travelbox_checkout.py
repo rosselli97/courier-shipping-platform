@@ -3,11 +3,14 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 from travelbox.client import AuthError, NoOffers, NotFound, UpstreamError, WriteNotAvailable
 
+from ..database import get_db
 from ..deps import get_active_user
 from ..models import User
 from ..schemas import TravelBoxCheckoutRequest, TravelBoxCheckoutResponse
+from ..shipments import record_travelbox_shipment
 from ..travelbox_quotes import create_travelbox_shipment, preview_travelbox_booking
 
 router = APIRouter(tags=["travelbox"])
@@ -53,7 +56,11 @@ def preview(body: TravelBoxCheckoutRequest, user: User = Depends(get_active_user
 
 
 @router.post("/travelbox/checkout", response_model=TravelBoxCheckoutResponse)
-def checkout(body: TravelBoxCheckoutRequest, user: User = Depends(get_active_user)):
+def checkout(
+    body: TravelBoxCheckoutRequest,
+    user: User = Depends(get_active_user),
+    db: Session = Depends(get_db),
+):
     if user.role not in ("admin", "reseller"):
         raise HTTPException(status_code=403, detail="Accesso non consentito")
 
@@ -97,10 +104,21 @@ def checkout(body: TravelBoxCheckoutRequest, user: User = Depends(get_active_use
     if result is None:
         raise HTTPException(status_code=503, detail="TravelBox non configurato")
 
+    message = result.message
+    if result.status == "submitted":
+        try:
+            local = record_travelbox_shipment(db, user, body, result)
+            if local is not None:
+                message = f"{message} Registrata nelle spedizioni MUVPACK."
+        except Exception:
+            db.rollback()
+            logger.exception("TravelBox: impossibile registrare la spedizione locale")
+            message = f"{message} Attenzione: spedizione non registrata nell'elenco MUVPACK."
+
     shipment = result.shipment
     return TravelBoxCheckoutResponse(
         status=result.status,
-        message=result.message,
+        message=message,
         reference=shipment.reference if shipment else None,
         tracking_number=shipment.tracking_number if shipment else None,
         shipment_id=shipment.id if shipment else None,

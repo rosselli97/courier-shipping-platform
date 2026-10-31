@@ -20,10 +20,11 @@ def tracking(code: str, db: Session = Depends(get_db)):
     if shipment is None:
         raise HTTPException(status_code=404, detail="Spedizione non trovata")
     shipment = advance_tracking(db, shipment)
+    courier_name = COURIERS.get(shipment.courier, {}).get("name") or shipment.courier.upper()
     return TrackingResponse(
         tracking_code=shipment.tracking_code,
         courier=shipment.courier,  # type: ignore[arg-type]
-        courier_name=COURIERS[shipment.courier]["name"],
+        courier_name=courier_name,
         origin_city=shipment.origin_city,
         dest_city=shipment.dest_city,
         status=shipment.status,  # type: ignore[arg-type]
