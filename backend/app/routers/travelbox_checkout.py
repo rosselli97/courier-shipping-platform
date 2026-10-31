@@ -8,10 +8,48 @@ from travelbox.client import AuthError, NoOffers, NotFound, UpstreamError, Write
 from ..deps import get_active_user
 from ..models import User
 from ..schemas import TravelBoxCheckoutRequest, TravelBoxCheckoutResponse
-from ..travelbox_quotes import create_travelbox_shipment
+from ..travelbox_quotes import create_travelbox_shipment, preview_travelbox_booking
 
 router = APIRouter(tags=["travelbox"])
 logger = logging.getLogger("muvpack.travelbox.checkout")
+
+
+@router.post("/travelbox/preview")
+def preview(body: TravelBoxCheckoutRequest, user: User = Depends(get_active_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Accesso riservato all'amministrazione")
+    try:
+        result = preview_travelbox_booking(
+            body,
+            body.offer_id,
+            body.recipient_name,
+            body.recipient_address,
+            body.recipient_email,
+            body.recipient_phone,
+            body.recipient_contact,
+            body.sender_name,
+            body.sender_address,
+            body.sender_email,
+            body.sender_phone,
+            body.sender_contact,
+        )
+    except AuthError as exc:
+        raise HTTPException(status_code=502, detail=f"Login TravelBox non riuscito: {exc}") from exc
+    except NoOffers as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except WriteNotAvailable as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except NotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except UpstreamError as exc:
+        logger.warning("TravelBox preview upstream error: %s %s", exc.status_code, exc.path)
+        raise HTTPException(status_code=502, detail="Errore dal portale TravelBox") from exc
+    except Exception as exc:
+        logger.exception("TravelBox preview failed")
+        raise HTTPException(status_code=502, detail="Preview TravelBox non riuscita") from exc
+    if result is None:
+        raise HTTPException(status_code=503, detail="TravelBox non configurato")
+    return result
 
 
 @router.post("/travelbox/checkout", response_model=TravelBoxCheckoutResponse)

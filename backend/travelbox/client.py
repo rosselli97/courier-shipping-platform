@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 import re
 import time
@@ -42,6 +43,8 @@ USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 )
+
+logger = logging.getLogger("travelbox.booking")
 
 SHIPMENT_FILTERS = (
     "data_dal",
@@ -621,6 +624,29 @@ class TravelBoxClient:
             fetched_at=parsers._now(),
         )
 
+    def booking_form(self, draft: ShipmentDraft, offer_id: str | None = None) -> dict[str, Any]:
+        result = self.quote(draft)
+        if not result.offers:
+            raise NoOffers(result.message or "Nessuna offerta disponibile per la tratta richiesta")
+        offer = next((o for o in result.offers if o.id == offer_id), None) if offer_id else result.offers[0]
+        if offer is None:
+            raise WriteNotAvailable(f"Offerta {offer_id} non presente nella risposta del portale")
+        if not offer.book_url:
+            raise WriteNotAvailable("L'offerta non espone il link `creaspedizione/...` necessario per la preview")
+        response = self._request("GET", offer.book_url)
+        if response.status_code >= 400:
+            raise UpstreamError(response.status_code, response.text, offer.book_url)
+        described = parsers.describe_booking_form(response.text)
+        action, fields = parsers.parse_booking_form(response.text)
+        return {
+            "offer": offer,
+            "action": action,
+            "fields": fields,
+            "controls": described.get("controls", []),
+            "preview_status": response.status_code,
+            "preview_length": len(response.text),
+        }
+
     def create_shipment(
         self,
         draft: ShipmentDraft,
@@ -706,6 +732,36 @@ class TravelBoxClient:
         # Nessun endpoint di pagamento viene chiamato da questo connettore.
         fields["metodo_pagamento"] = "carrello"
 
+        key_fields = (
+            "mittente[cognomenome]",
+            "mittente[indirizzo]",
+            "mittente[email]",
+            "mittente[telefono]",
+            "mittente[contatto]",
+            "destinatario[id]",
+            "destinatario[cognomenome]",
+            "destinatario[indirizzo]",
+            "destinatario[email]",
+            "destinatario[telefono]",
+            "destinatario[contatto]",
+            "metodo_pagamento",
+            "credito_residuo",
+            "totale_spedizione",
+            "data_ritiro",
+            "fascia_oraria_ritiro",
+            "ritiro_presso",
+            "ritiro_presso_mittente_hidden",
+            "serviziAggiuntivi[1]",
+            "delivery_point_selezionato",
+        )
+        logger.info(
+            "TravelBox submit action=%s offer=%s fields=%s values=%s",
+            action,
+            offer.id,
+            len(fields),
+            {name: fields.get(name) for name in key_fields if name in fields},
+        )
+
         before = {item.id for item in self.cart()}
         response = self._request(
             "POST",
@@ -721,6 +777,14 @@ class TravelBoxClient:
             },
         )
         if response.status_code >= 400:
+            logger.warning(
+                "TravelBox submit failed status=%s action=%s headers=%s body_len=%s body=%s",
+                response.status_code,
+                action,
+                dict(response.headers),
+                len(response.text),
+                parsers.clean(response.text)[:500],
+            )
             raise UpstreamError(response.status_code, response.text, action)
 
         created = next((item for item in self.cart() if item.id not in before), None)
@@ -731,6 +795,7 @@ class TravelBoxClient:
                 f"{parsers.clean(response.text)[:300]}"
             )
 
+        logger.info("TravelBox created shipment reference=%s id=%s", created.reference, created.id)
         return CreateShipmentResult(
             status="submitted",
             message=(

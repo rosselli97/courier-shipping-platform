@@ -707,6 +707,70 @@ def parse_booking_form(html: str) -> tuple[Optional[str], dict[str, str]]:
     return action, fields
 
 
+def _control_visible(element: Tag) -> bool:
+    node: Tag | None = element
+    while isinstance(node, Tag):
+        style = str(node.get("style") or "").replace(" ", "").lower()
+        if "display:none" in style:
+            return False
+        classes = node.get("class") or []
+        if isinstance(classes, str):
+            classes = classes.split()
+        if "d-none" in classes:
+            return False
+        node = node.parent if isinstance(node.parent, Tag) else None
+    return True
+
+
+def describe_booking_form(html: str) -> dict[str, Any]:
+    soup = BeautifulSoup(html, "html.parser")
+    form = soup.find("form", id="form-spedizione")
+    if not isinstance(form, Tag):
+        form = next(
+            (
+                candidate
+                for candidate in soup.find_all("form")
+                if "inseriscispedizione" in str(candidate.get("action") or "")
+            ),
+            None,
+        )
+    if not isinstance(form, Tag):
+        return {"action": None, "controls": []}
+
+    controls = []
+    for element in form.find_all(["input", "select", "textarea"]):
+        name = str(element.get("name") or "").strip()
+        if not name:
+            continue
+        input_type = str(element.get("type") or element.name).lower()
+        entry: dict[str, Any] = {
+            "name": name,
+            "id": element.get("id"),
+            "type": input_type,
+            "required": element.has_attr("required"),
+            "checked": element.has_attr("checked"),
+            "disabled": element.has_attr("disabled"),
+            "visible": _control_visible(element),
+            "optional": element.get("data-optional"),
+            "maxlength": element.get("maxlength"),
+        }
+        if element.name == "select":
+            options = []
+            selected = ""
+            for option in element.find_all("option"):
+                value = str(option.get("value") or "")
+                is_selected = option.has_attr("selected")
+                if is_selected or (not selected and not options):
+                    selected = value
+                options.append({"value": value, "text": clean(option.get_text(" ")), "selected": is_selected})
+            entry["value"] = selected
+            entry["options"] = options
+        else:
+            entry["value"] = element.get_text() if element.name == "textarea" else str(element.get("value") or "")
+        controls.append(entry)
+    return {"action": str(form.get("action") or "/inseriscispedizione"), "controls": controls}
+
+
 def parse_label_groups(html: str) -> list[LabelGroup]:
     soup = BeautifulSoup(html, "html.parser")
     select = soup.find("select", id="gruppicorrieri")

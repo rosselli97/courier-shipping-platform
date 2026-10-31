@@ -285,6 +285,64 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
     return response
 
 
+def preview_travelbox_booking(
+    req: QuoteRequest,
+    offer_id: str,
+    recipient_name: str | None = None,
+    recipient_address: str | None = None,
+    recipient_email: str | None = None,
+    recipient_phone: str | None = None,
+    recipient_contact: str | None = None,
+    sender_name: str | None = None,
+    sender_address: str | None = None,
+    sender_email: str | None = None,
+    sender_phone: str | None = None,
+    sender_contact: str | None = None,
+):
+    if not TRAVELBOX_QUOTES_ENABLED or not _settings.userid or not _settings.password:
+        return None
+    sender = _resolve_sender()
+    if sender is None:
+        return None
+
+    city = city_for_cap(req.dest_cap)
+    province = ""
+    client = get_client()
+    with _client_lock:
+        resolved = client.resolve_comune(req.dest_cap, city)
+        if resolved:
+            city = str(resolved.get("nome") or city)
+            province = str(resolved.get("provincia") or "")
+
+    draft = _build_draft(
+        req,
+        sender,
+        sender_name=sender_name,
+        sender_street=sender_address,
+        sender_email=sender_email,
+        sender_phone=sender_phone,
+        sender_contact=sender_contact,
+        recipient_name=recipient_name,
+        recipient_street=recipient_address,
+        recipient_email=recipient_email,
+        recipient_phone=recipient_phone,
+        recipient_contact=recipient_contact,
+        recipient_id="0",
+        recipient_city=city,
+        recipient_province=province,
+    )
+    with _client_lock:
+        result = client.booking_form(draft, offer_id)
+    return {
+        "offer": result["offer"].model_dump(),
+        "action": result["action"],
+        "fields": result["fields"],
+        "controls": result["controls"],
+        "preview_status": result["preview_status"],
+        "preview_length": result["preview_length"],
+    }
+
+
 def create_travelbox_shipment(
     req: QuoteRequest,
     offer_id: str,
