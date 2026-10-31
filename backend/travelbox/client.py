@@ -692,6 +692,8 @@ class TravelBoxClient:
             if value:
                 fields[name] = value
 
+        if not (fields.get("mittente[contatto]") or "").strip():
+            fields["mittente[contatto]"] = draft.sender_name or "MUVPACK"
         if len((fields.get("mittente[telefono]") or "").strip()) < 8:
             fields["mittente[telefono]"] = fields.get("mobile_ritiro") or "0000000000"
         if len((fields.get("destinatario[telefono]") or "").strip()) < 8:
