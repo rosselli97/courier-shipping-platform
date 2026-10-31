@@ -37,6 +37,8 @@ FRIENDLY = {
 _cache: dict[tuple, tuple[float, QuoteResponse]] = {}
 _cache_lock = threading.Lock()
 _client_lock = threading.Lock()
+# Alias pubblico per chi usa lo stesso client (es. import storico).
+client_lock = _client_lock
 
 _sender_cache: tuple[float, dict[str, str] | None] = (0.0, None)
 _sender_lock = threading.Lock()

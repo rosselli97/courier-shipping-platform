@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+from travelbox.api import get_client
 from travelbox.client import AuthError, NoOffers, NotFound, UpstreamError, WriteNotAvailable
 
 from ..database import get_db
 from ..deps import get_active_user
-from ..models import User
+from ..models import Shipment, User
 from ..schemas import TravelBoxCheckoutRequest, TravelBoxCheckoutResponse
-from ..shipments import record_travelbox_shipment
-from ..travelbox_quotes import create_travelbox_shipment, preview_travelbox_booking
+from ..shipments import (
+    record_travelbox_history,
+    record_travelbox_shipment,
+    travelbox_status_importable,
+)
+from ..travelbox_quotes import client_lock, create_travelbox_shipment, preview_travelbox_booking
 
 router = APIRouter(tags=["travelbox"])
 logger = logging.getLogger("muvpack.travelbox.checkout")
@@ -124,3 +131,82 @@ def checkout(
         shipment_id=shipment.id if shipment else None,
         label_token=shipment.label_token if shipment else None,
     )
+
+
+@router.post("/travelbox/import-history")
+def import_history(
+    user: User = Depends(get_active_user),
+    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=50),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+):
+    """Importa a blocchi lo storico TravelBox nell'elenco spedizioni MUVPACK.
+
+    Pensato per essere richiamato piu' volte dall'admin: ogni chiamata importa
+    fino a `limit` spedizioni nuove della pagina richiesta. Le annullate/rifiutate
+    e le spedizioni gia' presenti vengono saltate.
+    """
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Accesso riservato all'amministrazione")
+
+    year = date.today().year
+    start = date_from or f"{year}-01-01"
+    end = date_to or f"{year}-12-31"
+
+    client = get_client()
+    try:
+        with client_lock:
+            rows = client.shipments(page=page, data_dal=start, data_al=end)
+    except Exception as exc:
+        logger.exception("TravelBox import: elenco non disponibile")
+        raise HTTPException(status_code=502, detail="Elenco spedizioni TravelBox non disponibile") from exc
+
+    refs = [(row.reference or "").strip().upper() for row in rows if row.reference]
+    existing: set[str] = set()
+    if refs:
+        existing = set(
+            db.scalars(select(Shipment.tracking_code).where(Shipment.tracking_code.in_(refs)))
+        )
+
+    pending = [
+        row
+        for row in rows
+        if row.reference
+        and row.reference.strip().upper() not in existing
+        and travelbox_status_importable(row.status)
+    ]
+
+    imported = 0
+    failed = 0
+    for remote in pending[:limit]:
+        detail = None
+        try:
+            with client_lock:
+                detail = client.shipment_detail(remote.id or remote.reference or "")
+        except Exception:
+            logger.warning(
+                "TravelBox import: dettaglio non disponibile per %s", remote.reference, exc_info=True
+            )
+        if detail is not None and not travelbox_status_importable(detail.status):
+            continue
+        try:
+            if record_travelbox_history(db, user, remote, detail) is not None:
+                imported += 1
+        except Exception:
+            db.rollback()
+            failed += 1
+            logger.exception("TravelBox import: impossibile registrare %s", remote.reference)
+
+    processed = imported + failed
+    return {
+        "page": page,
+        "date_from": start,
+        "date_to": end,
+        "total": len(rows),
+        "pending": len(pending),
+        "imported": imported,
+        "failed": failed,
+        "remaining": max(0, len(pending) - processed),
+    }

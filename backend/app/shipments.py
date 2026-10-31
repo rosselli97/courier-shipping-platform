@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from travelbox.models import CreateShipmentResult
+from travelbox.models import CreateShipmentResult, Shipment as TravelBoxShipment
 
 from .geo import city_for_cap
 from .models import Contact, Shipment, TrackingEvent, User, WalletTx
@@ -167,6 +167,120 @@ def _travelbox_courier(value: str | None) -> str:
     if "UPS" in text:
         return "ups"
     return "other"
+
+
+SKIP_IMPORT_STATUSES = ("ANNULL", "RIFIUT", "IN ERRORE", "NON A BUON FINE")
+
+
+def travelbox_status_importable(status: str | None) -> bool:
+    text = (status or "").upper()
+    return not any(marker in text for marker in SKIP_IMPORT_STATUSES)
+
+
+def _travelbox_status(value: str | None) -> str:
+    text = (value or "").upper()
+    if "CONSEGNAT" in text:
+        return "consegnata"
+    if "IN CONSEGNA" in text:
+        return "in_consegna"
+    if any(marker in text for marker in ("GIACENZA", "DISPONIBILE PER IL RITIRO", "LASCIATO AVVISO")):
+        return "giacenza"
+    if any(
+        marker in text
+        for marker in ("IN TRANSITO", "TRASMESSA", "IN LAVORAZIONE", "IN FASE DI INVIO", "PARTITA")
+    ):
+        return "in_transito"
+    return "creata"
+
+
+def _parse_travelbox_date(value: str | None) -> datetime:
+    for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M"):
+        if not value:
+            break
+        try:
+            return datetime.strptime(value.strip(), fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return datetime.now(timezone.utc)
+
+
+def record_travelbox_history(
+    db: Session,
+    user: User,
+    remote: TravelBoxShipment,
+    detail: TravelBoxShipment | None = None,
+) -> Shipment | None:
+    """Importa una spedizione storica TravelBox nell'elenco MUVPACK.
+
+    Il dettaglio (`/vedispedizione/{token}`) e' la fonte preferita per mittente,
+    destinatario, colli e prezzi; se non e' disponibile si usa la riga di lista.
+    """
+    data = detail or remote
+    reference = (data.reference or remote.reference or "").strip().upper()
+    if not reference:
+        reference = (data.tracking_number or remote.tracking_number or "").strip().upper()
+    if not reference:
+        return None
+    if db.scalar(select(Shipment).where(Shipment.tracking_code == reference)) is not None:
+        return None
+
+    sender = data.sender or remote.sender
+    recipient = data.recipient or remote.recipient
+    packages = data.packages or []
+    price = _money_amount(data.price) or _money_amount(remote.price)
+    weight = data.chargeable_weight_kg or remote.chargeable_weight_kg or 0.0
+    if not weight:
+        weight = round(sum(package.weight_kg or 0 for package in packages), 2)
+    first = packages[0] if packages else None
+    service = (data.service or remote.service or "").lower()
+    is_pallet = "pallet" in service or any(
+        "pallet" in (package.type or "").lower() for package in packages
+    )
+    origin_city = (sender.city if sender else None) or (sender.name if sender else None) or "TravelBox"
+    dest_city = (recipient.city if recipient else None) or (recipient.name if recipient else None) or "TravelBox"
+    created_at = _parse_travelbox_date(data.created_at or remote.created_at)
+    status_raw = remote.status or data.status
+    status = _travelbox_status(status_raw)
+
+    shipment = Shipment(
+        tracking_code=reference,
+        owner_id=user.id,
+        is_admin_shipment=user.role == "admin",
+        courier=_travelbox_courier(data.carrier or remote.carrier or service),
+        origin_cap=(sender.postal_code if sender else None) or "00000",
+        origin_city=origin_city,
+        dest_cap=(recipient.postal_code if recipient else None) or "00000",
+        dest_city=dest_city,
+        recipient_name=(recipient.name if recipient else None) or "Destinatario TravelBox",
+        recipient_address=(recipient.street if recipient else None) or "",
+        recipient_email=recipient.email if recipient else None,
+        weight_kg=weight,
+        length_cm=(first.length_cm if first else None) or 0.0,
+        width_cm=(first.width_cm if first else None) or 0.0,
+        height_cm=(first.height_cm if first else None) or 0.0,
+        billable_weight_kg=weight,
+        is_pallet=is_pallet,
+        base_cost=price,
+        fuel_surcharge=0.0,
+        price=price,
+        status=status,
+        email_status="none",
+        created_at=created_at,
+    )
+    db.add(shipment)
+    db.flush()
+    db.add(
+        TrackingEvent(
+            shipment_id=shipment.id,
+            status=status,
+            description=f"Importata da TravelBox (stato: {status_raw or 'n/d'})",
+            location=origin_city,
+            timestamp=created_at,
+        )
+    )
+    db.commit()
+    db.refresh(shipment)
+    return shipment
 
 
 def record_travelbox_shipment(
