@@ -80,6 +80,27 @@ def _configured_sender() -> dict[str, str] | None:
     return None
 
 
+def _sender_detail(entry_id: str) -> dict:
+    try:
+        with _client_lock:
+            response = get_client()._request("GET", f"/getmittentidestinatarimod/{entry_id}")
+        if response.status_code < 400:
+            return response.json().get("data") or {}
+    except Exception:
+        logger.exception("TravelBox: impossibile leggere il dettaglio del mittente")
+    return {}
+
+
+def _enrich_sender(data: dict[str, str], entry) -> dict[str, str]:
+    detail = _sender_detail(entry.id)
+    if detail:
+        data["email"] = str(detail.get("email") or data["email"] or "")
+        data["phone"] = str(detail.get("telefono") or data["phone"] or "")
+        data["mobile"] = str(detail.get("cellulare") or "")
+        data["contact"] = str(detail.get("contatto") or "")
+    return data
+
+
 def _resolve_sender() -> dict[str, str] | None:
     global _sender_cache
     configured = _configured_sender()
@@ -110,14 +131,18 @@ def _resolve_sender() -> dict[str, str] | None:
             "street": party.street or "",
             "email": party.email or "",
             "phone": party.phone or "",
+            "mobile": "",
+            "contact": "",
         }
         if fallback is None:
-            fallback = data
+            fallback = (data, entry)
         if configured and entry.id == configured["id"]:
+            data = _enrich_sender(data, entry)
             with _sender_lock:
                 _sender_cache = (now, data)
             return data
         if not configured and ("mitt" in (entry.kind or "").lower() or not entry.kind):
+            data = _enrich_sender(data, entry)
             with _sender_lock:
                 _sender_cache = (now, data)
             return data
@@ -125,9 +150,12 @@ def _resolve_sender() -> dict[str, str] | None:
     if configured:
         return configured
     if fallback is not None:
+        data, entry = fallback
+        data = _enrich_sender(data, entry)
         with _sender_lock:
-            _sender_cache = (now, fallback)
-    return fallback
+            _sender_cache = (now, data)
+        return data
+    return None
 
 
 def _cache_get(key: tuple) -> QuoteResponse | None:
@@ -171,8 +199,8 @@ def _build_draft(
         sender_name=sender_name or sender.get("name") or None,
         sender_street=sender_street or sender.get("street") or None,
         sender_email=sender_email or sender.get("email") or None,
-        sender_phone=sender_phone or sender.get("phone") or None,
-        sender_contact=sender_contact or sender.get("name") or None,
+        sender_phone=sender_phone or sender.get("phone") or sender.get("mobile") or None,
+        sender_contact=sender_contact or sender.get("contact") or sender.get("name") or None,
         recipient_id=recipient_id,
         sender_city=city_for_cap(req.origin_cap),
         sender_cap=req.origin_cap,
@@ -277,8 +305,8 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
             province="",
             postal_code=req.origin_cap,
             email=sender.get("email") or None,
-            phone=sender.get("phone") or None,
-            contact=sender.get("name") or None,
+            phone=sender.get("phone") or sender.get("mobile") or None,
+            contact=sender.get("contact") or sender.get("name") or None,
         ),
     )
     _cache_set(key, response)
