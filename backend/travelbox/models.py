@@ -234,6 +234,8 @@ class Invoice(BaseModel):
 
 class AddressBookEntry(BaseModel):
     id: Optional[str] = None
+    # Id numerico usato dagli endpoint di scrittura (la rubrica espone token).
+    numeric_id: Optional[str] = None
     party: Party
     kind: Optional[str] = None
     source: str = "travelboxcontorno"

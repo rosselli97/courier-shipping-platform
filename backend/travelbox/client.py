@@ -10,7 +10,6 @@ spedizione e download etichette).
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import os
@@ -99,6 +98,7 @@ class TravelBoxClient:
         self.settings = settings or Settings()
         self._last_call = 0.0
         self._logged_in = False
+        self._anagrafica: dict[str, str] | None = None
         self.http = httpx.Client(
             base_url=self.settings.base_url.rstrip("/"),
             timeout=self.settings.timeout,
@@ -375,7 +375,8 @@ class TravelBoxClient:
                 (party.postal_code or "").strip(),
             )
             if current == target:
-                return entry.id
+                # Gli endpoint di scrittura vogliono l'id numerico, non il token.
+                return entry.numeric_id or parsers.numeric_id(entry.id) or entry.id
         return None
 
     def create_recipient(
@@ -392,8 +393,12 @@ class TravelBoxClient:
         contact: str | None = None,
         tax_code: str | None = None,
         vat: str | None = None,
+        anagrafica_id: str | None = None,
     ) -> str:
+        if not anagrafica_id:
+            anagrafica_id = self.account_anagrafica_id()
         payload = {
+            "anagrafica_id": anagrafica_id or "",
             "item_id": "0",
             "tipo": "DE",
             "cognomenome": name,
@@ -430,17 +435,19 @@ class TravelBoxClient:
 
     @staticmethod
     def _numeric_id(token: str) -> str:
-        if token.isdigit():
-            return token
-        try:
-            padded = token + "=" * (-len(token) % 4)
-            raw = base64.b64decode(padded).decode("utf-8", "ignore")
-            match = re.search(r"id[=:](\d+)", raw)
-            if match:
-                return match.group(1)
-        except Exception:
-            pass
-        return token
+        return parsers.numeric_id(token) or token
+
+    def account_anagrafica(self) -> dict[str, str]:
+        """Dati anagrafici dell'account da `/latuaanagrafica` (cache per client)."""
+        if self._anagrafica is None:
+            self._anagrafica = parsers.parse_account_anagrafica(
+                self._get_html("/latuaanagrafica")
+            )
+        return self._anagrafica
+
+    def account_anagrafica_id(self) -> str | None:
+        """Id dell'anagrafica dell'account, richiesto per creare la rubrica."""
+        return self.account_anagrafica().get("id") or None
 
     def delete_recipient(self, recipient_id: str) -> bool:
         numeric = self._numeric_id(recipient_id)
@@ -723,6 +730,15 @@ class TravelBoxClient:
             if value:
                 fields[name] = value
 
+        # `mittente[id]` e `destinatario[id]` devono essere numerici: con il
+        # token base64 della rubrica il portale risponde HTTP 500.
+        sender_id = parsers.numeric_id(draft.sender_id) or draft.sender_id
+        if sender_id:
+            fields["mittente[id]"] = str(sender_id)
+        recipient_id = parsers.numeric_id(draft.recipient_id) or draft.recipient_id
+        if recipient_id:
+            fields["destinatario[id]"] = str(recipient_id)
+
         if not (fields.get("mittente[contatto]") or "").strip():
             fields["mittente[contatto]"] = draft.sender_contact or draft.sender_name or "MUVPACK"
         if len((fields.get("mittente[telefono]") or "").strip()) < 8:
@@ -731,6 +747,32 @@ class TravelBoxClient:
             fields["destinatario[telefono]"] = "0000000000"
         if not (fields.get("descrizione_beni") or "").strip():
             fields["descrizione_beni"] = "Merci varie"
+
+        # Limiti `maxlength` del form: il submit via API non passa dal browser,
+        # quindi vanno applicati qui per evitare rifiuti/500 lato portale.
+        limits = {
+            "mittente[cognomenome]": 35,
+            "mittente[indirizzo]": 35,
+            "mittente[indirizzo2]": 35,
+            "mittente[email]": 50,
+            "mittente[telefono]": 13,
+            "mittente[contatto]": 35,
+            "mittente[codice_fiscale]": 30,
+            "mittente[partita_iva]": 30,
+            "destinatario[cognomenome]": 35,
+            "destinatario[indirizzo]": 35,
+            "destinatario[indirizzo2]": 35,
+            "destinatario[email]": 50,
+            "destinatario[telefono]": 13,
+            "destinatario[contatto]": 35,
+            "destinatario[codice_fiscale]": 30,
+            "destinatario[partita_iva]": 30,
+            "descrizione_beni": 25,
+        }
+        for name, limit in limits.items():
+            value = str(fields.get(name) or "").strip()
+            if value:
+                fields[name] = value[:limit]
 
         # Il form preseleziona `bonifico`: lo sostituiamo SEMPRE con carrello.
         # Nessun endpoint di pagamento viene chiamato da questo connettore.

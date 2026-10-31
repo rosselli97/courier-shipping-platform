@@ -397,11 +397,16 @@ create_shipment(draft, offer_id, confirm=False)
                      (nessun endpoint di pagamento viene chiamato)
 ```
 
-Due dettagli non ovvi, verificati sul portale:
+Tre dettagli non ovvi, verificati sul portale:
 
 - `datiSpedizioneCompleta.partenza.stato` vuole il **codice paese** (`IT`), non
   `Italia`; `localita` vuole l'**idcomune numerico** (`82019`), non il nome.
   Con il nome il portale risponde “Nessuna offerta disponibile”.
+- `mittente[id]` e `destinatario[id]` nel form `/inseriscispedizione` vogliono
+  l'**id numerico** (`13563`), non il token base64 della rubrica
+  (`aWQ9MTM1NjM=`). Con il token il portale risponde HTTP 500 e crea righe
+  vuote in rubrica. `parsers.numeric_id()` fa la conversione; la creazione del
+  destinatario richiede anche `anagrafica_id`.
 - Il form di conferma preseleziona `metodo_pagamento=bonifico`: il connettore
   lo sostituisce **sempre** con `carrello`. Per completare l'acquisto serve un
   passo di pagamento separato, che questo codice non implementa.

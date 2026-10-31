@@ -4,6 +4,7 @@ import logging
 import threading
 import time
 
+from travelbox import parsers
 from travelbox.api import get_client
 from travelbox.config import Settings
 
@@ -94,10 +95,26 @@ def _sender_detail(entry_id: str) -> dict:
 def _enrich_sender(data: dict[str, str], entry) -> dict[str, str]:
     detail = _sender_detail(entry.id)
     if detail:
-        data["email"] = str(detail.get("email") or data["email"] or "")
-        data["phone"] = str(detail.get("telefono") or data["phone"] or "")
-        data["mobile"] = str(detail.get("cellulare") or "")
-        data["contact"] = str(detail.get("contatto") or "")
+        data = _detail_sender(data, detail)
+        data["token"] = entry.id
+    return data
+
+
+def _detail_sender(data: dict[str, str], detail: dict) -> dict[str, str]:
+    """Completa il mittente configurato leggendo `/getmittentidestinatarimod`."""
+    if not detail:
+        return data
+    data["id"] = str(detail.get("id") or data.get("id") or "")
+    data["name"] = str(detail.get("cognomenome") or data.get("name") or "")
+    data["street"] = str(detail.get("indirizzo1") or data.get("street") or "")
+    data["city"] = str(detail.get("citta") or data.get("city") or "")
+    data["cap"] = str(detail.get("cap") or data.get("cap") or "")
+    data["province"] = str(detail.get("provincia") or data.get("province") or "")
+    data["email"] = str(detail.get("email") or data.get("email") or "")
+    data["phone"] = str(detail.get("telefono") or data.get("phone") or "")
+    data["mobile"] = str(detail.get("cellulare") or data.get("mobile") or "")
+    data["contact"] = str(detail.get("contatto") or data.get("contact") or "")
+    data["anagrafica_id"] = str(detail.get("anagrafica_id") or data.get("anagrafica_id") or "")
     return data
 
 
@@ -117,13 +134,29 @@ def _resolve_sender() -> dict[str, str] | None:
         logger.exception("TravelBox: impossibile leggere la rubrica per il mittente")
         return configured
 
+    profile: dict[str, str] = {}
+    try:
+        with _client_lock:
+            profile = get_client().account_anagrafica()
+    except Exception:
+        logger.exception("TravelBox: impossibile leggere l'anagrafica dell'account")
+    profile_email = (profile.get("email") or "").strip().casefold()
+    profile_name = (profile.get("ragione_sociale") or "").strip().casefold()
+
     fallback = None
+    first_mittente = None
+    valid_mittente = None
+    first_valid = None
+    hint_mittente = None
+    hint_any = None
     for entry in entries:
         party = entry.party
         if not entry.id or not party.city or not party.postal_code or not party.province:
             continue
+        entry_id = entry.numeric_id or parsers.numeric_id(entry.id) or entry.id
         data = {
-            "id": entry.id,
+            "id": entry_id,
+            "token": entry.id,
             "city": party.city,
             "cap": party.postal_code,
             "province": party.province,
@@ -133,24 +166,52 @@ def _resolve_sender() -> dict[str, str] | None:
             "phone": party.phone or "",
             "mobile": "",
             "contact": "",
+            "anagrafica_id": "",
         }
         if fallback is None:
             fallback = (data, entry)
-        if configured and entry.id == configured["id"]:
+        if configured and configured["id"] in (entry_id, entry.id):
             data = _enrich_sender(data, entry)
             with _sender_lock:
                 _sender_cache = (now, data)
             return data
-        if not configured and ("mitt" in (entry.kind or "").lower() or not entry.kind):
-            data = _enrich_sender(data, entry)
-            with _sender_lock:
-                _sender_cache = (now, data)
-            return data
+        is_mittente = "mitt" in (entry.kind or "").lower() or not entry.kind
+        has_data = bool(data["name"].strip() and data["street"].strip())
+        if has_data and first_valid is None:
+            first_valid = (data, entry)
+        if is_mittente and first_mittente is None:
+            first_mittente = (data, entry)
+        if is_mittente and has_data and valid_mittente is None:
+            valid_mittente = (data, entry)
+        hint = has_data and (
+            (profile_email and (data["email"] or "").strip().casefold() == profile_email)
+            or (profile_name and (data["name"] or "").strip().casefold() == profile_name)
+        )
+        if hint:
+            if hint_any is None:
+                hint_any = (data, entry)
+            if is_mittente and hint_mittente is None:
+                hint_mittente = (data, entry)
 
     if configured:
-        return configured
-    if fallback is not None:
-        data, entry = fallback
+        # Id configurato ma non presente (o non confrontabile) in rubrica:
+        # leggiamo comunque il dettaglio per avere nome, indirizzo e
+        # anagrafica_id necessari alla creazione.
+        data = _detail_sender(dict(configured), _sender_detail(configured["id"]))
+        with _sender_lock:
+            _sender_cache = (now, data)
+        return data
+
+    candidate = (
+        hint_mittente
+        or hint_any
+        or valid_mittente
+        or first_valid
+        or first_mittente
+        or fallback
+    )
+    if candidate is not None:
+        data, entry = candidate
         data = _enrich_sender(data, entry)
         with _sender_lock:
             _sender_cache = (now, data)
@@ -207,7 +268,7 @@ def _build_draft(
         recipient_id=recipient_id,
         sender_city=city_for_cap(req.origin_cap),
         sender_cap=req.origin_cap,
-        sender_province="",
+        sender_province=(sender.get("province") or "") if req.origin_cap == sender.get("cap") else "",
         recipient_city=recipient_city or city_for_cap(req.dest_cap),
         recipient_cap=req.dest_cap,
         recipient_province=recipient_province,
@@ -308,7 +369,7 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
             name=sender.get("name") or None,
             street=sender.get("street") or None,
             city=city_for_cap(req.origin_cap),
-            province="",
+            province=sender.get("province") or None,
             postal_code=req.origin_cap,
             email=sender.get("email") or None,
             phone=sender.get("phone") or sender.get("mobile") or None,
@@ -413,6 +474,7 @@ def create_travelbox_shipment(
             province = str(resolved.get("provincia") or "")
         recipient_id = client.find_recipient(recipient_name, recipient_address, req.dest_cap)
         if not recipient_id:
+            anagrafica_id = sender.get("anagrafica_id") or client.account_anagrafica_id()
             recipient_id = client.create_recipient(
                 name=recipient_name,
                 street=recipient_address,
@@ -422,6 +484,7 @@ def create_travelbox_shipment(
                 email=recipient_email,
                 phone=recipient_phone,
                 contact=recipient_contact,
+                anagrafica_id=anagrafica_id,
             )
             created_recipient = True
 

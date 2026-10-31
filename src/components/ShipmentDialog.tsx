@@ -259,20 +259,20 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="snd-name">Cognome e nome / Ragione sociale</Label>
-                <Input id="snd-name" required minLength={2} data-testid="shipment-sender-name-input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="Alessio Rosselli" />
+                <Input id="snd-name" required minLength={2} maxLength={35} data-testid="shipment-sender-name-input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="Alessio Rosselli" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="snd-addr">Indirizzo</Label>
-                <Input id="snd-addr" required minLength={4} data-testid="shipment-sender-address-input" value={senderAddress} onChange={(e) => setSenderAddress(e.target.value)} placeholder="Via Roma 1" />
+                <Input id="snd-addr" required minLength={4} maxLength={35} data-testid="shipment-sender-address-input" value={senderAddress} onChange={(e) => setSenderAddress(e.target.value)} placeholder="Via Roma 1" />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="snd-email">Email</Label>
-                  <Input id="snd-email" type="email" data-testid="shipment-sender-email-input" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} placeholder="mittente@email.it" />
+                  <Input id="snd-email" type="email" maxLength={50} data-testid="shipment-sender-email-input" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} placeholder="mittente@email.it" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="snd-phone">Telefono</Label>
-                  <Input id="snd-phone" type="tel" required minLength={8} data-testid="shipment-sender-phone-input" value={senderPhone} onChange={(e) => setSenderPhone(e.target.value)} placeholder="333 1234567" />
+                  <Input id="snd-phone" type="tel" required minLength={8} maxLength={13} data-testid="shipment-sender-phone-input" value={senderPhone} onChange={(e) => setSenderPhone(e.target.value)} placeholder="333 1234567" />
                 </div>
               </div>
             </div>
@@ -283,32 +283,32 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="rcp-name">Nome e cognome / Ragione sociale</Label>
-            <Input id="rcp-name" data-testid="shipment-recipient-name-input" required minLength={2} value={name} onChange={(e) => setName(e.target.value)} placeholder="Mario Rossi" />
+            <Input id="rcp-name" data-testid="shipment-recipient-name-input" required minLength={2} maxLength={35} value={name} onChange={(e) => setName(e.target.value)} placeholder="Mario Rossi" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="rcp-addr">Indirizzo</Label>
-            <Input id="rcp-addr" data-testid="shipment-recipient-address-input" required minLength={4} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Via Roma 1" />
+            <Input id="rcp-addr" data-testid="shipment-recipient-address-input" required minLength={4} maxLength={35} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Via Roma 1" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="rcp-email">Email destinatario <span className="font-normal text-muted-foreground">(facoltativa)</span></Label>
-            <Input id="rcp-email" type="email" data-testid="shipment-recipient-email-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mario.rossi@email.it" />
+            <Input id="rcp-email" type="email" maxLength={50} data-testid="shipment-recipient-email-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mario.rossi@email.it" />
             <p className="text-xs text-muted-foreground">Riceverà il codice e il link di tracciamento appena creata la spedizione.</p>
           </div>
           {quote?.source === "travelbox" && (
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="rcp-phone">Telefono destinatario</Label>
-                <Input id="rcp-phone" type="tel" required minLength={8} data-testid="shipment-recipient-phone-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="333 1234567" />
+                <Input id="rcp-phone" type="tel" required minLength={8} maxLength={13} data-testid="shipment-recipient-phone-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="333 1234567" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="rcp-contact">Contatto</Label>
-                <Input id="rcp-contact" data-testid="shipment-recipient-contact-input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Referente" />
+                <Input id="rcp-contact" maxLength={35} data-testid="shipment-recipient-contact-input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Referente" />
               </div>
               <div className="space-y-3 rounded-2xl border bg-muted/30 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dettagli spedizione</p>
                 <div className="space-y-1.5">
                   <Label htmlFor="tb-description">Descrizione beni</Label>
-                  <Textarea id="tb-description" rows={2} required data-testid="shipment-description-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Documenti, abbigliamento, ricambi…" />
+                  <Textarea id="tb-description" rows={2} required maxLength={25} data-testid="shipment-description-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Documenti, abbigliamento, ricambi…" />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">

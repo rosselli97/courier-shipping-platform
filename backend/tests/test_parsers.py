@@ -5,6 +5,9 @@ from decimal import Decimal
 from travelbox.parsers import (
     decode_token,
     encode_shipment_token,
+    numeric_id,
+    parse_account_anagrafica,
+    parse_account_anagrafica_id,
     parse_address_book,
     parse_booking_form,
     parse_cart,
@@ -95,6 +98,17 @@ ADDRESS_BOOK = {
     </tr>
     """,
 }
+
+ACCOUNT_ANAGRAFICA_HTML = """
+<form id="kt_modal_anagrafica_form">
+  <input type="hidden" name="action" value="update">
+  <input type="hidden" name="id" value="634">
+  <input type="hidden" name="iduser" value="589">
+  <input type="text" name="ragione_sociale" value="FRANCESCO GIULIANO">
+  <input type="text" name="email" value="alessio.rosselli97@gmail.com">
+  <input type="text" name="cod_iva" value="">
+</form>
+"""
 
 DETAIL_HTML = """
 <span><strong>Tipo spedizione: Pacchi</strong></span>
@@ -257,6 +271,10 @@ def test_token_roundtrip_and_decode():
         "idspedizione": "33682",
         "idallegato": "41183",
     }
+    assert numeric_id("13563") == "13563"
+    assert numeric_id("aWQ9MTM1NjM=") == "13563"
+    assert numeric_id("aWQ9OTY0Nw==") == "9647"
+    assert numeric_id(None) is None
 
 
 def test_parse_shipments_maps_real_row():
@@ -406,3 +424,13 @@ def test_parse_address_book():
     assert entries[0].party.postal_code == "90086"
     assert entries[0].kind == "Mittente"
     assert entries[0].id == "aWQ9OTY0Nw=="
+    # Gli endpoint di scrittura vogliono l'id numerico, non il token.
+    assert entries[0].numeric_id == "9647"
+
+
+def test_parse_account_anagrafica():
+    data = parse_account_anagrafica(ACCOUNT_ANAGRAFICA_HTML)
+    assert data["id"] == "634"
+    assert data["ragione_sociale"] == "FRANCESCO GIULIANO"
+    assert data["email"] == "alessio.rosselli97@gmail.com"
+    assert parse_account_anagrafica_id(ACCOUNT_ANAGRAFICA_HTML) == "634"

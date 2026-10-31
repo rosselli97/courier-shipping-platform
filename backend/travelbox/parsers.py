@@ -112,6 +112,26 @@ def encode_shipment_token(shipment_id: str | int) -> str:
     return base64.b64encode(raw).decode()
 
 
+def numeric_id(token: str | None) -> Optional[str]:
+    """Id numerico del portale a partire dal token base64 della rubrica.
+
+    La rubrica espone solo token (`aWQ9MTM1NjM=`), ma `/inseriscispedizione`
+    vuole gli id numerici (`13563`): con il token risponde 500. Questa funzione
+    e' l'unico punto di conversione usato dal connettore.
+    """
+    if not token:
+        return None
+    value = str(token).strip()
+    if value.isdigit():
+        return value
+    data = decode_token(value)
+    for key in ("id", "idcliente", "idmittentedestinatario", "item_id", "idmd"):
+        candidate = str(data.get(key) or "").strip()
+        if candidate.isdigit():
+            return candidate
+    return None
+
+
 def extract_csrf(html: str) -> Optional[str]:
     soup = BeautifulSoup(html, "html.parser")
     field = soup.find("input", {"name": "csrf_token"})
@@ -353,8 +373,51 @@ def parse_address_book(payload: str | dict[str, Any]) -> list[AddressBookEntry]:
         edit = re.search(r"editItem\('([^']+)'\)", str(tr))
         if edit:
             entry_id = edit.group(1)
-        out.append(AddressBookEntry(id=entry_id, party=party, kind=kind))
+        out.append(
+            AddressBookEntry(
+                id=entry_id,
+                numeric_id=numeric_id(entry_id),
+                party=party,
+                kind=kind,
+            )
+        )
     return out
+
+
+def parse_account_anagrafica(html: str) -> dict[str, str]:
+    """Dati dell'anagrafica dell'account da `/latuaanagrafica`.
+
+    `anagrafica_id` serve a `mittentidestinatari_create`; email e ragione
+    sociale servono a scegliere un mittente della rubrica appartenente
+    all'account invece di un'anagrafica qualsiasi.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    for form in soup.find_all("form", id="kt_modal_anagrafica_form"):
+        data: dict[str, str] = {}
+        for element in form.find_all(["input", "select", "textarea"]):
+            name = str(element.get("name") or "").strip()
+            if not name:
+                continue
+            if element.name == "select":
+                option = element.find("option", selected=True) or element.find("option")
+                data[name] = clean(option.get_text(" ")) if isinstance(option, Tag) else ""
+            elif element.name == "textarea":
+                data[name] = element.get_text()
+            else:
+                data[name] = str(element.get("value") or "")
+        if data.get("id"):
+            return data
+    return {}
+
+
+def parse_account_anagrafica_id(html: str) -> Optional[str]:
+    """Id dell'anagrafica dell'account da `/latuaanagrafica`.
+
+    Serve a `mittentidestinatari_create`: senza `anagrafica_id` il portale
+    risponde 400 e non crea il destinatario.
+    """
+    value = parse_account_anagrafica(html).get("id")
+    return value or None
 
 
 def _party_from_inputs(soup: BeautifulSoup, prefix: str) -> dict[str, str]:
