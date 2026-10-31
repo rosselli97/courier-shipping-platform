@@ -10,6 +10,7 @@ spedizione e download etichette).
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -423,9 +424,23 @@ class TravelBoxClient:
                 return str(value)
         raise WriteNotAvailable("Destinatario creato ma id non recuperabile dalla rubrica")
 
+    @staticmethod
+    def _numeric_id(token: str) -> str:
+        if token.isdigit():
+            return token
+        try:
+            padded = token + "=" * (-len(token) % 4)
+            raw = base64.b64decode(padded).decode("utf-8", "ignore")
+            match = re.search(r"id[=:](\d+)", raw)
+            if match:
+                return match.group(1)
+        except Exception:
+            pass
+        return token
+
     def delete_recipient(self, recipient_id: str) -> bool:
-        numeric = recipient_id
-        if not str(recipient_id).isdigit():
+        numeric = self._numeric_id(recipient_id)
+        if not numeric.isdigit():
             response = self._request("GET", f"/getmittentidestinatarimod/{recipient_id}")
             if response.status_code < 400:
                 try:

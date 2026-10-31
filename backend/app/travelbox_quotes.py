@@ -318,6 +318,7 @@ def create_travelbox_shipment(
         if created_recipient:
             with _client_lock:
                 try:
+                    client.ensure_session()
                     client.delete_recipient(recipient_id)
                 except Exception:
                     logger.exception("TravelBox: impossibile rimuovere il destinatario temporaneo")
