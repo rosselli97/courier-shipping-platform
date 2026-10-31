@@ -81,6 +81,7 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - La creazione del destinatario passa `anagrafica_id` (ricavato dal dettaglio mittente o da `/latuaanagrafica`); la rubrica espone token, ma il form di conferma vuole gli id numerici, quindi il connettore li converte.
 - Dopo la creazione, MUVPACK registra una spedizione locale con `tracking_code = TBC-...`, owner = utente e un evento di tracking: compare subito in **Spedizioni effettuate** (admin) o **Le tue spedizioni** (rivenditore). Per queste righe il PDF etichetta locale è disabilitato: l'etichetta si scarica dal portale TravelBox.
 - `POST /api/travelbox/import-history` (admin) importa a blocchi lo storico TravelBox nell'elenco MUVPACK; salta annullate/rifiutate e spedizioni già presenti.
+- Storico 2026 importato in produzione: **102 spedizioni TravelBox** (oltre alle 2 spedizioni locali già presenti), visibili in **Spedizioni effettuate** con badge TravelBox.
 - In caso di errore il destinatario temporaneo viene rimosso.
 - Il controllo sul credito residuo è stato **rimosso** su richiesta: MUVPACK non blocca più la creazione per credito.
 
