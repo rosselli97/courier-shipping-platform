@@ -43,7 +43,7 @@ export default function PalletRates() {
   };
 
   return (
-    <section data-testid="admin-pallet-rates-card" className="rounded-2xl border bg-card p-6 shadow-sm">
+    <section id="corrieri" data-testid="admin-pallet-rates-card" className="scroll-mt-28 rounded-2xl border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-navy">
