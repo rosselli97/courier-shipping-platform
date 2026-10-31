@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -11,7 +11,8 @@ from travelbox.client import AuthError, NoOffers, NotFound, UpstreamError, Write
 
 from ..database import get_db
 from ..deps import get_active_user
-from ..models import Shipment, User
+from ..geo import city_for_cap
+from ..models import Contact, Shipment, User
 from ..schemas import TravelBoxCheckoutRequest, TravelBoxCheckoutResponse
 from ..shipments import (
     record_travelbox_history,
@@ -210,3 +211,63 @@ def import_history(
         "failed": failed,
         "remaining": max(0, len(pending) - processed),
     }
+
+
+@router.post("/travelbox/import-address-book")
+def import_address_book(
+    user: User = Depends(get_active_user),
+    db: Session = Depends(get_db),
+    include_senders: bool = Query(False),
+):
+    """Importa la rubrica TravelBox nella rubrica MUVPACK dell'admin."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Accesso riservato all'amministrazione")
+
+    client = get_client()
+    try:
+        with client_lock:
+            entries = client.address_book()
+    except Exception as exc:
+        logger.exception("TravelBox import rubrica: elenco non disponibile")
+        raise HTTPException(status_code=502, detail="Rubrica TravelBox non disponibile") from exc
+
+    existing = {
+        (row.name.strip().casefold(), row.address.strip().casefold(), row.cap.strip())
+        for row in db.scalars(select(Contact).where(Contact.user_id == user.id))
+    }
+    now = datetime.now(timezone.utc)
+    imported = 0
+    skipped = 0
+    for entry in entries:
+        party = entry.party
+        kind = (entry.kind or "").strip().lower()
+        if not include_senders and kind.startswith("mitt"):
+            skipped += 1
+            continue
+        name = (party.name or "").strip()
+        address = (party.street or "").strip()
+        cap = (party.postal_code or "").strip()
+        if len(name) < 2 or len(address) < 4 or not (cap.isdigit() and len(cap) == 5):
+            skipped += 1
+            continue
+        key = (name.casefold(), address.casefold(), cap)
+        if key in existing:
+            skipped += 1
+            continue
+        db.add(
+            Contact(
+                user_id=user.id,
+                name=name,
+                address=address,
+                cap=cap,
+                city=(party.city or "").strip() or city_for_cap(cap),
+                email=party.email or None,
+                uses=0,
+                last_used_at=now,
+            )
+        )
+        existing.add(key)
+        imported += 1
+
+    db.commit()
+    return {"total": len(entries), "imported": imported, "skipped": skipped}
