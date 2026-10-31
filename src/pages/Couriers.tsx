@@ -52,6 +52,20 @@ export default function Couriers() {
         </Link>
         <h1 className="mt-3 font-heading text-3xl font-bold text-navy">Scegli il corriere</h1>
 
+        {me.data?.role === "admin" && (
+          <Link
+            to="/admin/travelbox"
+            data-testid="couriers-travelbox-link"
+            className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-brand/30 bg-brand-soft px-4 py-3 text-sm transition-colors hover:border-brand"
+          >
+            <span>
+              <b className="text-navy">Prezzi reali TravelBox</b>
+              <span className="block text-xs text-muted-foreground">Offerte del portale con mittente e destinatario reali</span>
+            </span>
+            <span className="shrink-0 font-semibold text-brand">Apri →</span>
+          </Link>
+        )}
+
         <div data-testid="couriers-route-summary" className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border bg-card px-4 py-3 text-sm">
           <span className="font-semibold text-navy">
             {quote.data?.origin_city ?? req.origin_cap} <span className="text-brand">→</span> {quote.data?.dest_city ?? req.dest_cap}
