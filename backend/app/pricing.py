@@ -59,7 +59,8 @@ def round2(value: float) -> float:
 
 
 def billable_weight(req: QuoteRequest) -> tuple[float, float]:
-    volumetric = (req.length_cm * req.width_cm * req.height_cm) / VOLUMETRIC_DIVISOR
+    pieces = max(1, int(req.pieces or 1))
+    volumetric = (req.length_cm * req.width_cm * req.height_cm * pieces) / VOLUMETRIC_DIVISOR
     return round2(max(req.weight_kg, volumetric)), round2(volumetric)
 
 
@@ -117,7 +118,8 @@ def quote_for_courier(db: Session, req: QuoteRequest, courier: str, user: User |
     zone = pallet_zone(req.origin_cap, req.dest_cap) if req.is_pallet else None
 
     if req.is_pallet:
-        base = round2(pallet_price(db, courier, zone or 1))
+        pieces = max(1, int(req.pieces or 1))
+        base = round2(pallet_price(db, courier, zone or 1) * pieces)
     else:
         base = round2(config["base"] + config["per_kg"] * billable)
 

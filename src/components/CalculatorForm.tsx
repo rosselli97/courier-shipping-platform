@@ -11,13 +11,13 @@ import { useContacts } from "@/lib/contacts";
 import { cn } from "@/lib/utils";
 
 const PRESETS = [
-  { id: "busta", label: "Busta", sub: "0,5 kg", icon: Mail, w: "0.5", l: "30", wi: "22", h: "3", p: "0" },
-  { id: "standard", label: "Pacco", sub: "3 kg", icon: Package, w: "3", l: "40", wi: "30", h: "20", p: "0" },
-  { id: "pallet", label: "Pallet", sub: "120×80 · 150 kg", icon: Boxes, w: "150", l: "120", wi: "80", h: "100", p: "1" },
+  { id: "busta", label: "Busta", sub: "0,5 kg", icon: Mail, w: "0.5", l: "30", wi: "22", h: "3", n: "1", p: "0" },
+  { id: "standard", label: "Pacco", sub: "3 kg", icon: Package, w: "3", l: "40", wi: "30", h: "20", n: "1", p: "0" },
+  { id: "pallet", label: "Pallet", sub: "120×80 · 150 kg", icon: Boxes, w: "150", l: "120", wi: "80", h: "100", n: "1", p: "1" },
 ];
 
-/** p = "1" for a pallet shipment (fixed pallet tariff), "0" for a parcel */
-export type CalcValues = Record<"o" | "d" | "w" | "l" | "wi" | "h" | "p", string>;
+/** n = number of parcels/colli, p = "1" for a pallet shipment, "0" for a parcel */
+export type CalcValues = Record<"o" | "d" | "w" | "l" | "wi" | "h" | "n" | "p", string>;
 
 export default function CalculatorForm({ onSubmit, initial }: {
   onSubmit: (v: CalcValues, contactId: string | null) => void;
@@ -27,7 +27,7 @@ export default function CalculatorForm({ onSubmit, initial }: {
   const contacts = useContacts(!!me.data);
   const book = contacts.isError ? [] : contacts.data ?? [];
   const [contactId, setContactId] = useState<string | null>(null);
-  const [form, setForm] = useState<CalcValues>(initial ?? { o: "20121", d: "00187", w: "3", l: "40", wi: "30", h: "20", p: "0" });
+  const [form, setForm] = useState<CalcValues>(initial ?? { o: "20121", d: "00187", w: "3", l: "40", wi: "30", h: "20", n: "1", p: "0" });
   const [preset, setPreset] = useState(initial ? "" : "standard");
   const set = (k: keyof CalcValues) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [k]: e.target.value });
@@ -35,7 +35,8 @@ export default function CalculatorForm({ onSubmit, initial }: {
     setPreset("");
   };
   const capOk = (v: string) => /^\d{5}$/.test(v);
-  const valid = capOk(form.o) && capOk(form.d) && [form.w, form.l, form.wi, form.h].every((v) => Number(v) > 0);
+  const piecesOk = (v: string) => Number.isInteger(Number(v)) && Number(v) >= 1;
+  const valid = capOk(form.o) && capOk(form.d) && piecesOk(form.n) && [form.w, form.l, form.wi, form.h].every((v) => Number(v) > 0);
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (valid) onSubmit(form, contactId);
@@ -62,7 +63,7 @@ export default function CalculatorForm({ onSubmit, initial }: {
             key={p.id}
             data-testid={`calc-preset-${p.id}`}
             onClick={() => {
-              setForm({ ...form, w: p.w, l: p.l, wi: p.wi, h: p.h, p: p.p });
+              setForm({ ...form, w: p.w, l: p.l, wi: p.wi, h: p.h, n: p.n, p: p.p });
               setPreset(p.id);
             }}
             className={cn(
@@ -122,9 +123,15 @@ export default function CalculatorForm({ onSubmit, initial }: {
         </div>
       </div>
 
-      <div className="mt-4 space-y-1.5">
-        <Label htmlFor="w">Peso (kg)</Label>
-        <Input id="w" type="number" step="0.1" min="0.1" data-testid="calc-weight-input" value={form.w} onChange={set("w")} className="h-12 text-base" />
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="w">Peso totale (kg)</Label>
+          <Input id="w" type="number" step="0.1" min="0.1" data-testid="calc-weight-input" value={form.w} onChange={set("w")} className="h-12 text-base" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="n">Colli</Label>
+          <Input id="n" type="number" step="1" min="1" max="100" data-testid="calc-pieces-input" value={form.n} onChange={set("n")} className="h-12 text-base" />
+        </div>
       </div>
 
       <div className="mt-4">
@@ -153,7 +160,7 @@ export default function CalculatorForm({ onSubmit, initial }: {
 
       {!valid && (
         <p data-testid="calc-validation-error" className="mt-3 text-sm text-destructive">
-          Inserisci CAP validi (5 cifre), peso e dimensioni.
+          Inserisci CAP validi (5 cifre), colli, peso e dimensioni.
         </p>
       )}
 

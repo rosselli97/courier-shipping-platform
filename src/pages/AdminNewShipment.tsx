@@ -10,7 +10,7 @@ import type { CourierQuote, QuoteRequest, QuoteResponse } from "@/lib/types";
 
 const toReq = (v: CalcValues): QuoteRequest => ({
   origin_cap: v.o, dest_cap: v.d, weight_kg: Number(v.w), length_cm: Number(v.l), width_cm: Number(v.wi), height_cm: Number(v.h),
-  is_pallet: v.p === "1", source: "travelbox",
+  pieces: Number(v.n), is_pallet: v.p === "1", source: "travelbox",
 });
 
 export default function AdminNewShipment() {
@@ -46,7 +46,7 @@ export default function AdminNewShipment() {
           {req && quote.data && !quote.isError && (
             <>
               <p className="mb-3 text-sm text-muted-foreground">
-                {quote.data.origin_city} → {quote.data.dest_city} · peso tassabile <b className="text-navy">{quote.data.billable_weight_kg} kg</b>
+                {quote.data.origin_city} → {quote.data.dest_city} · {req.pieces} colli, peso tassabile <b className="text-navy">{quote.data.billable_weight_kg} kg</b>
                 {quote.data.provider === "travelbox" ? " · prezzi reali TravelBox (IVA inclusa)" : " · prezzi a costo"}
                 {quote.data.is_pallet && <> · <b className="text-navy">Pallet, {quote.data.pallet_zone}</b></>}
               </p>

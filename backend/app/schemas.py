@@ -49,6 +49,7 @@ class QuoteRequest(BaseModel):
     length_cm: float = Field(gt=0)
     width_cm: float = Field(gt=0)
     height_cm: float = Field(gt=0)
+    pieces: int = Field(default=1, ge=1, le=100)
     is_pallet: bool = False
     source: Literal["auto", "local", "travelbox"] = "auto"
 

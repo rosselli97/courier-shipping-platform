@@ -170,7 +170,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
             <CourierLogo courier={quote.courier} size="sm" />
             <div className="flex-1 text-sm">
               <p className="font-semibold text-navy">{quote.courier_name}</p>
-              <p className="text-muted-foreground">{request.origin_cap} → {request.dest_cap} · {request.weight_kg} kg</p>
+              <p className="text-muted-foreground">{request.origin_cap} → {request.dest_cap} · {request.pieces} colli - {request.weight_kg} kg</p>
             </div>
             <div className="text-right">
               <p className="font-heading text-lg font-bold text-navy">{eur(quote.price)}</p>
@@ -222,6 +222,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
                 length_cm: request.length_cm,
                 width_cm: request.width_cm,
                 height_cm: request.height_cm,
+                pieces: request.pieces,
                 is_pallet: request.is_pallet,
                 offer_id: quote.id,
                 recipient_name: name,

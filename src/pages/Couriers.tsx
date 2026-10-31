@@ -23,6 +23,7 @@ export default function Couriers() {
     length_cm: Number(params.get("l") ?? 0),
     width_cm: Number(params.get("wi") ?? 0),
     height_cm: Number(params.get("h") ?? 0),
+    pieces: Number(params.get("n") ?? 1),
     is_pallet: params.get("p") === "1",
     source: me.data ? "travelbox" : "local",
   };
@@ -57,7 +58,7 @@ export default function Couriers() {
           <span className="font-semibold text-navy">
             {quote.data?.origin_city ?? req.origin_cap} <span className="text-brand">→</span> {quote.data?.dest_city ?? req.dest_cap}
           </span>
-          <span className="text-muted-foreground">{req.length_cm}×{req.width_cm}×{req.height_cm} cm</span>
+          <span className="text-muted-foreground">{req.pieces} colli - {req.length_cm}×{req.width_cm}×{req.height_cm} cm</span>
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <Scale className="size-3.5" /> Peso tassabile{" "}
             <b data-testid="couriers-billable-weight" className="text-navy">{quote.data?.billable_weight_kg ?? req.weight_kg} kg</b>

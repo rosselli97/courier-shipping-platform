@@ -125,6 +125,7 @@ export interface TravelBoxCheckoutPayload {
   length_cm: number;
   width_cm: number;
   height_cm: number;
+  pieces: number;
   is_pallet: boolean;
   offer_id: string;
   recipient_name: string;

@@ -282,7 +282,7 @@ def _build_draft(
         pickup_slot=pickup_slot,
         packages=[
             Package(
-                pieces=1,
+                pieces=req.pieces,
                 weight_kg=req.weight_kg,
                 width_cm=req.width_cm,
                 height_cm=req.height_cm,
@@ -309,6 +309,7 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
         round(req.length_cm, 2),
         round(req.width_cm, 2),
         round(req.height_cm, 2),
+        req.pieces,
         req.is_pallet,
     )
     cached = _cache_get(key)

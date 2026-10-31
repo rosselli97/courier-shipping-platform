@@ -109,6 +109,7 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - Su richiesta, la sidebar admin è stata **riportata alla versione precedente**.
 - La card **“Serve aiuto?”** è stata creata **solo per i clienti B2B/rivenditori**, sopra il profilo utente; l'admin non la mostra.
 - Il dialog di creazione dopo la scelta del corriere mostra i campi mittente/destinatario e i dettagli spedizione.
+- Aggiunto il campo **Colli** (1-100) nel form di nuova spedizione: entra nel peso volumetrico (`L×P×A×colli/5000`), nel preventivo TravelBox (`pieces`) e nel prezzo pallet (tariffa × colli).
 
 ## 7. Account demo
 

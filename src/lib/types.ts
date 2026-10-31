@@ -19,6 +19,7 @@ export interface QuoteRequest {
   length_cm: number;
   width_cm: number;
   height_cm: number;
+  pieces: number;
   is_pallet: boolean;
   source?: "auto" | "local" | "travelbox";
 }
