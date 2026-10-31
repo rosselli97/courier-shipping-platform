@@ -40,10 +40,7 @@ def checkout(body: TravelBoxCheckoutRequest, user: User = Depends(get_active_use
         logger.warning("TravelBox checkout upstream error: %s %s", exc.status_code, exc.path)
         raise HTTPException(
             status_code=502,
-            detail=(
-                "Il portale TravelBox ha rifiutato la creazione. "
-                "Verifica il credito residuo del conto TravelBox e i dati del destinatario, poi riprova."
-            ),
+            detail="Il portale TravelBox ha rifiutato la creazione. Riprova o verifica i dati sul portale.",
         ) from exc
     except Exception as exc:
         logger.exception("TravelBox checkout failed")

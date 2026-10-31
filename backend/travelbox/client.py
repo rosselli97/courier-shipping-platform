@@ -705,8 +705,6 @@ class TravelBoxClient:
         # Nessun endpoint di pagamento viene chiamato da questo connettore.
         fields["metodo_pagamento"] = "carrello"
 
-        credit = _parse_money(fields.get("credito_residuo"))
-        total = _parse_money(fields.get("totale_spedizione"))
         before = {item.id for item in self.cart()}
         response = self._request(
             "POST",
@@ -722,12 +720,6 @@ class TravelBoxClient:
             },
         )
         if response.status_code >= 400:
-            if credit is not None and total is not None and credit + 0.005 < total:
-                raise WriteNotAvailable(
-                    f"Credito TravelBox insufficiente: disponibili € {credit:.2f}, "
-                    f"necessari € {total:.2f}. Ricarica il conto TravelBox o scegli "
-                    "un'offerta di importo inferiore."
-                )
             raise UpstreamError(response.status_code, response.text, action)
 
         created = next((item for item in self.cart() if item.id not in before), None)
@@ -828,17 +820,3 @@ def _num(value: float | None) -> str:
     if value is None:
         return "0.00"
     return f"{value:.2f}"
-
-
-def _parse_money(value: str | None) -> float | None:
-    if not value:
-        return None
-    text = str(value).strip().replace("€", "").replace(" ", "")
-    if not text:
-        return None
-    if "," in text:
-        text = text.replace(".", "").replace(",", ".")
-    try:
-        return float(text)
-    except ValueError:
-        return None

@@ -212,7 +212,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
           </div>
           {quote?.source === "travelbox" && (
             <p className="rounded-xl bg-brand-soft px-3 py-2 text-xs text-brand">
-              Verrà creata sul portale TravelBox e messa nel carrello. Nessun pagamento automatico. Il conto TravelBox deve avere credito sufficiente.
+              Verrà creata sul portale TravelBox e messa nel carrello. Nessun pagamento automatico.
             </p>
           )}
           <DialogFooter>
