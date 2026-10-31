@@ -105,7 +105,7 @@ export default function Couriers() {
           {quote.data?.provider === "travelbox" ? "Prezzi reali TravelBox IVA inclusa." : "Prezzi IVA esclusa."}
         </p>
       </main>
-      <ShipmentDialog quote={selected} request={req} role={me.data?.role ?? "reseller"} prefillContactId={params.get("c")} onClose={() => setSelected(null)} />
+        <ShipmentDialog quote={selected} request={req} role={me.data?.role ?? "reseller"} prefillContactId={params.get("c")} sender={quote.data?.sender} onClose={() => setSelected(null)} />
     </div>
   );
 }

@@ -130,6 +130,13 @@ export interface TravelBoxCheckoutPayload {
   recipient_name: string;
   recipient_address: string;
   recipient_email?: string | null;
+  recipient_phone?: string | null;
+  recipient_contact?: string | null;
+  sender_name?: string | null;
+  sender_address?: string | null;
+  sender_email?: string | null;
+  sender_phone?: string | null;
+  sender_contact?: string | null;
   confirm?: boolean;
 }
 

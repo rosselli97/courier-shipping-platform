@@ -83,6 +83,7 @@ class ShipmentDraft(BaseModel):
     sender_street: Optional[str] = None
     sender_email: Optional[str] = None
     sender_phone: Optional[str] = None
+    sender_contact: Optional[str] = None
     sender_city: str
     sender_cap: str
     sender_province: str
@@ -103,6 +104,7 @@ class ShipmentDraft(BaseModel):
     recipient_street2: Optional[str] = None
     recipient_email: Optional[str] = None
     recipient_phone: Optional[str] = None
+    recipient_contact: Optional[str] = None
     recipient_tax_code: Optional[str] = None
     recipient_vat: Optional[str] = None
     packages: list[Package] = Field(min_length=1)

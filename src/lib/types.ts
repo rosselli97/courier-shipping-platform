@@ -38,6 +38,17 @@ export interface CourierQuote {
   price_includes_vat?: boolean;
 }
 
+export interface QuoteParty {
+  name?: string | null;
+  street?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postal_code?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  contact?: string | null;
+}
+
 export interface QuoteResponse {
   is_pallet: boolean;
   pallet_zone: string | null;
@@ -48,6 +59,7 @@ export interface QuoteResponse {
   quotes: CourierQuote[];
   provider?: "local" | "travelbox";
   notice?: string | null;
+  sender?: QuoteParty | null;
 }
 
 export interface TrackingEvent {

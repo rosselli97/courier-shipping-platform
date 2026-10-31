@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { BookUser, CheckCircle2, Download } from "lucide-react";
 import { eur, errorMessage } from "@/lib/format";
 import { tbCheckout, tbCheckoutLabelHref, type TravelBoxCheckoutResult } from "@/lib/travelbox";
-import type { Contact, CourierQuote, QuoteRequest, ResellerShipment, ShipmentCreate } from "@/lib/types";
+import type { Contact, CourierQuote, QuoteParty, QuoteRequest, ResellerShipment, ShipmentCreate } from "@/lib/types";
 
 interface Props {
   quote: CourierQuote | null;
@@ -25,18 +25,35 @@ interface Props {
   onCreated?: () => void;
   /** address-book contact chosen in the calculator: pre-fills the recipient */
   prefillContactId?: string | null;
+  /** TravelBox sender data coming from the quote */
+  sender?: QuoteParty | null;
 }
 
-export default function ShipmentDialog({ quote, request, onClose, role = "reseller", onCreated, prefillContactId }: Props) {
+export default function ShipmentDialog({ quote, request, onClose, role = "reseller", onCreated, prefillContactId, sender }: Props) {
   const isAdmin = role === "admin";
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [contact, setContact] = useState("");
+  const [senderName, setSenderName] = useState("");
+  const [senderAddress, setSenderAddress] = useState("");
+  const [senderEmail, setSenderEmail] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
+  const [senderContact, setSenderContact] = useState("");
   const [tbResult, setTbResult] = useState<TravelBoxCheckoutResult | null>(null);
   const open = quote !== null;
   useEffect(() => {
     if (!open) setTbResult(null);
   }, [open]);
+  useEffect(() => {
+    if (!open || quote?.source !== "travelbox") return;
+    setSenderName(sender?.name ?? "");
+    setSenderAddress(sender?.street ?? "");
+    setSenderEmail(sender?.email ?? "");
+    setSenderPhone(sender?.phone ?? "");
+    setSenderContact(sender?.contact ?? sender?.name ?? "");
+  }, [open, quote?.source, sender?.name, sender?.street, sender?.email, sender?.phone, sender?.contact]);
   const contacts = useContacts(open);
   // only recipients at the quoted destination CAP can be used (the price depends on it)
   const book = (contacts.isError ? [] : contacts.data ?? []).filter((c) => c.cap === request.dest_cap);
@@ -85,12 +102,14 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
 
   return (
     <Dialog open={quote !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent data-testid="shipment-create-dialog" className="sm:max-w-md">
+      <DialogContent data-testid="shipment-create-dialog" className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-heading text-navy">Dati destinatario</DialogTitle>
+          <DialogTitle className="font-heading text-navy">
+            {quote?.source === "travelbox" ? "Dati mittente e destinatario" : "Dati destinatario"}
+          </DialogTitle>
           <DialogDescription>
             {quote?.source === "travelbox"
-              ? "La spedizione verrà creata nel carrello TravelBox, senza pagamento."
+              ? "Completa i dati della spedizione: verrà creata nel carrello TravelBox, senza pagamento."
               : "Completa i dati per generare la lettera di vettura."}
           </DialogDescription>
         </DialogHeader>
@@ -187,6 +206,13 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
                 recipient_name: name,
                 recipient_address: address,
                 recipient_email: email.trim() || null,
+                recipient_phone: phone.trim() || null,
+                recipient_contact: contact.trim() || null,
+                sender_name: senderName.trim() || null,
+                sender_address: senderAddress.trim() || null,
+                sender_email: senderEmail.trim() || null,
+                sender_phone: senderPhone.trim() || null,
+                sender_contact: senderContact.trim() || null,
                 confirm: true,
               });
               return;
@@ -197,6 +223,40 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
             });
           }}
         >
+          {quote?.source === "travelbox" && (
+            <div className="space-y-3 rounded-2xl border bg-muted/30 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dati mittente</p>
+                <span className="text-[11px] text-muted-foreground">
+                  CAP {sender?.postal_code ?? request.origin_cap}
+                  {sender?.city ? ` · ${sender.city}` : ""}
+                  {sender?.province ? ` ${sender.province}` : ""}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="snd-name">Cognome e nome / Ragione sociale</Label>
+                <Input id="snd-name" required minLength={2} data-testid="shipment-sender-name-input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="Alessio Rosselli" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="snd-addr">Indirizzo</Label>
+                <Input id="snd-addr" required minLength={4} data-testid="shipment-sender-address-input" value={senderAddress} onChange={(e) => setSenderAddress(e.target.value)} placeholder="Via Roma 1" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="snd-email">Email</Label>
+                  <Input id="snd-email" type="email" data-testid="shipment-sender-email-input" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} placeholder="mittente@email.it" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="snd-phone">Telefono</Label>
+                  <Input id="snd-phone" type="tel" required minLength={8} data-testid="shipment-sender-phone-input" value={senderPhone} onChange={(e) => setSenderPhone(e.target.value)} placeholder="333 1234567" />
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dati destinatario</p>
+            <span className="text-[11px] text-muted-foreground">CAP {request.dest_cap}</span>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="rcp-name">Nome e cognome / Ragione sociale</Label>
             <Input id="rcp-name" data-testid="shipment-recipient-name-input" required minLength={2} value={name} onChange={(e) => setName(e.target.value)} placeholder="Mario Rossi" />
@@ -211,9 +271,19 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
             <p className="text-xs text-muted-foreground">Riceverà il codice e il link di tracciamento appena creata la spedizione.</p>
           </div>
           {quote?.source === "travelbox" && (
-            <p className="rounded-xl bg-brand-soft px-3 py-2 text-xs text-brand">
-              Verrà creata sul portale TravelBox e messa nel carrello. Nessun pagamento automatico.
-            </p>
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="rcp-phone">Telefono destinatario</Label>
+                <Input id="rcp-phone" type="tel" required minLength={8} data-testid="shipment-recipient-phone-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="333 1234567" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="rcp-contact">Contatto</Label>
+                <Input id="rcp-contact" data-testid="shipment-recipient-contact-input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Referente" />
+              </div>
+              <p className="rounded-xl bg-brand-soft px-3 py-2 text-xs text-brand">
+                Verrà creata sul portale TravelBox e messa nel carrello. Nessun pagamento automatico.
+              </p>
+            </>
           )}
           <DialogFooter>
             <Button

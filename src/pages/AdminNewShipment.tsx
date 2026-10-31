@@ -58,7 +58,7 @@ export default function AdminNewShipment() {
           )}
         </div>
       </div>
-      {req && <ShipmentDialog quote={selected} request={req} role="admin" prefillContactId={contactId} onClose={() => setSelected(null)} />}
+      {req && <ShipmentDialog quote={selected} request={req} role="admin" prefillContactId={contactId} sender={quote.data?.sender} onClose={() => setSelected(null)} />}
     </DashboardShell>
   );
 }

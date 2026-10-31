@@ -685,6 +685,7 @@ class TravelBoxClient:
             "destinatario[indirizzo2]": draft.recipient_street2,
             "destinatario[email]": draft.recipient_email,
             "destinatario[telefono]": draft.recipient_phone,
+            "destinatario[contatto]": draft.recipient_contact,
             "destinatario[codice_fiscale]": draft.recipient_tax_code,
             "destinatario[partita_iva]": draft.recipient_vat,
         }
@@ -693,7 +694,7 @@ class TravelBoxClient:
                 fields[name] = value
 
         if not (fields.get("mittente[contatto]") or "").strip():
-            fields["mittente[contatto]"] = draft.sender_name or "MUVPACK"
+            fields["mittente[contatto]"] = draft.sender_contact or draft.sender_name or "MUVPACK"
         if len((fields.get("mittente[telefono]") or "").strip()) < 8:
             fields["mittente[telefono]"] = fields.get("mobile_ritiro") or "0000000000"
         if len((fields.get("destinatario[telefono]") or "").strip()) < 8:

@@ -76,6 +76,17 @@ class CourierQuote(BaseModel):
     price_includes_vat: bool = False
 
 
+class QuoteParty(BaseModel):
+    name: str | None = None
+    street: str | None = None
+    city: str | None = None
+    province: str | None = None
+    postal_code: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    contact: str | None = None
+
+
 class QuoteResponse(BaseModel):
     is_pallet: bool
     pallet_zone: str | None
@@ -86,6 +97,7 @@ class QuoteResponse(BaseModel):
     quotes: list[CourierQuote]
     provider: Literal["local", "travelbox"] = "local"
     notice: str | None = None
+    sender: QuoteParty | None = None
 
 
 class ShipmentCreate(QuoteRequest):
@@ -352,6 +364,13 @@ class TravelBoxCheckoutRequest(QuoteRequest):
     recipient_name: str = Field(min_length=2)
     recipient_address: str = Field(min_length=4)
     recipient_email: str | None = None
+    recipient_phone: str | None = None
+    recipient_contact: str | None = None
+    sender_name: str | None = None
+    sender_address: str | None = None
+    sender_email: str | None = None
+    sender_phone: str | None = None
+    sender_contact: str | None = None
     confirm: bool = True
 
     @field_validator("recipient_email")

@@ -19,7 +19,7 @@ from .config import (
 from .geo import PALLET_ZONES, city_for_cap, pallet_zone
 from .models import User
 from .pricing import billable_weight
-from .schemas import CourierQuote, QuoteRequest, QuoteResponse
+from .schemas import CourierQuote, QuoteParty, QuoteRequest, QuoteResponse
 
 logger = logging.getLogger("muvpack.travelbox")
 _settings = Settings()
@@ -150,9 +150,16 @@ def _build_draft(
     req: QuoteRequest,
     sender: dict[str, str],
     *,
+    sender_name: str | None = None,
+    sender_street: str | None = None,
+    sender_email: str | None = None,
+    sender_phone: str | None = None,
+    sender_contact: str | None = None,
     recipient_name: str | None = None,
     recipient_street: str | None = None,
     recipient_email: str | None = None,
+    recipient_phone: str | None = None,
+    recipient_contact: str | None = None,
     recipient_id: str = "0",
     recipient_city: str | None = None,
     recipient_province: str = "",
@@ -161,10 +168,11 @@ def _build_draft(
 
     return ShipmentDraft(
         sender_id=sender["id"],
-        sender_name=sender.get("name") or None,
-        sender_street=sender.get("street") or None,
-        sender_email=sender.get("email") or None,
-        sender_phone=sender.get("phone") or None,
+        sender_name=sender_name or sender.get("name") or None,
+        sender_street=sender_street or sender.get("street") or None,
+        sender_email=sender_email or sender.get("email") or None,
+        sender_phone=sender_phone or sender.get("phone") or None,
+        sender_contact=sender_contact or sender.get("name") or None,
         recipient_id=recipient_id,
         sender_city=city_for_cap(req.origin_cap),
         sender_cap=req.origin_cap,
@@ -175,6 +183,8 @@ def _build_draft(
         recipient_name=recipient_name,
         recipient_street=recipient_street,
         recipient_email=recipient_email,
+        recipient_phone=recipient_phone,
+        recipient_contact=recipient_contact,
         packages=[
             Package(
                 pieces=1,
@@ -260,6 +270,16 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
         quotes=quotes,
         provider="travelbox",
         notice=result.message or (None if quotes else "Nessuna offerta TravelBox per questa tratta"),
+        sender=QuoteParty(
+            name=sender.get("name") or None,
+            street=sender.get("street") or None,
+            city=city_for_cap(req.origin_cap),
+            province="",
+            postal_code=req.origin_cap,
+            email=sender.get("email") or None,
+            phone=sender.get("phone") or None,
+            contact=sender.get("name") or None,
+        ),
     )
     _cache_set(key, response)
     return response
@@ -271,6 +291,13 @@ def create_travelbox_shipment(
     recipient_name: str,
     recipient_address: str,
     recipient_email: str | None,
+    recipient_phone: str | None = None,
+    recipient_contact: str | None = None,
+    sender_name: str | None = None,
+    sender_address: str | None = None,
+    sender_email: str | None = None,
+    sender_phone: str | None = None,
+    sender_contact: str | None = None,
     confirm: bool = True,
 ):
     if not TRAVELBOX_QUOTES_ENABLED or not _settings.userid or not _settings.password:
@@ -298,15 +325,24 @@ def create_travelbox_shipment(
                 city=city,
                 province=province,
                 email=recipient_email,
+                phone=recipient_phone,
+                contact=recipient_contact,
             )
             created_recipient = True
 
     draft = _build_draft(
         req,
         sender,
+        sender_name=sender_name,
+        sender_street=sender_address,
+        sender_email=sender_email,
+        sender_phone=sender_phone,
+        sender_contact=sender_contact,
         recipient_name=recipient_name,
         recipient_street=recipient_address,
         recipient_email=recipient_email,
+        recipient_phone=recipient_phone,
+        recipient_contact=recipient_contact,
         recipient_id=recipient_id,
         recipient_city=city,
         recipient_province=province,
