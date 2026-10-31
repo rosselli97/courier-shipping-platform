@@ -144,7 +144,7 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
   );
 
   return (
-    <div className="min-h-screen bg-page lg:pl-[280px]">
+    <div className={cn("min-h-screen lg:pl-[280px]", role === "admin" ? "bg-[#F8F5F1]" : "bg-page")}>
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[280px] flex-col bg-[#062B44] text-white lg:flex">
         <div className="px-6 pb-5 pt-7">
           <BrandLogo variant="white" className="h-6" />
