@@ -33,6 +33,9 @@ export const COURIER_NAME: Record<CourierId, string> = {
   poste: "Poste Italiane",
   brt: "BRT",
   dhl: "DHL Express",
+  fedex: "FedEx",
+  ups: "UPS",
+  other: "Corriere",
 };
 
 export function errorMessage(e: unknown, fallback = "Si è verificato un errore"): string {

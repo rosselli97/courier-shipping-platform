@@ -1,5 +1,5 @@
 // Hand-written mirrors of backend/models/schemas.py — keep in sync.
-export type CourierId = "poste" | "brt" | "dhl";
+export type CourierId = "poste" | "brt" | "dhl" | "fedex" | "ups" | "other";
 export type ShipmentStatus = "creata" | "in_transito" | "in_consegna" | "consegnata" | "giacenza";
 export type MarkupType = "percent" | "fixed";
 
@@ -20,9 +20,11 @@ export interface QuoteRequest {
   width_cm: number;
   height_cm: number;
   is_pallet: boolean;
+  source?: "auto" | "local" | "travelbox";
 }
 
 export interface CourierQuote {
+  id?: string | null;
   courier: CourierId;
   courier_name: string;
   service_name: string;
@@ -32,6 +34,8 @@ export interface CourierQuote {
   fuel_surcharge: number;
   markup: number;
   price: number;
+  source?: "local" | "travelbox";
+  price_includes_vat?: boolean;
 }
 
 export interface QuoteResponse {
@@ -42,6 +46,8 @@ export interface QuoteResponse {
   origin_city: string;
   dest_city: string;
   quotes: CourierQuote[];
+  provider?: "local" | "travelbox";
+  notice?: string | null;
 }
 
 export interface TrackingEvent {

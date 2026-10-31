@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-CourierId = Literal["poste", "brt", "dhl"]
+CourierId = Literal["poste", "brt", "dhl", "fedex", "ups", "other"]
 ShipmentStatus = Literal["creata", "in_transito", "in_consegna", "consegnata", "giacenza"]
 MarkupType = Literal["percent", "fixed"]
 Role = Literal["admin", "reseller"]
@@ -50,6 +50,7 @@ class QuoteRequest(BaseModel):
     width_cm: float = Field(gt=0)
     height_cm: float = Field(gt=0)
     is_pallet: bool = False
+    source: Literal["auto", "local", "travelbox"] = "auto"
 
     @field_validator("origin_cap", "dest_cap")
     @classmethod
@@ -61,6 +62,7 @@ class QuoteRequest(BaseModel):
 
 
 class CourierQuote(BaseModel):
+    id: str | None = None
     courier: CourierId
     courier_name: str
     service_name: str
@@ -70,6 +72,8 @@ class CourierQuote(BaseModel):
     fuel_surcharge: float
     markup: float
     price: float
+    source: Literal["local", "travelbox"] = "local"
+    price_includes_vat: bool = False
 
 
 class QuoteResponse(BaseModel):
@@ -80,6 +84,8 @@ class QuoteResponse(BaseModel):
     origin_city: str
     dest_city: str
     quotes: list[CourierQuote]
+    provider: Literal["local", "travelbox"] = "local"
+    notice: str | None = None
 
 
 class ShipmentCreate(QuoteRequest):

@@ -19,6 +19,9 @@ const COURIER_TILE: Record<CourierId, { bg: string; text: string; label: string 
   poste: { bg: "bg-[#FFCC00]", text: "text-[#0047BB] italic", label: "Poste" },
   brt: { bg: "bg-[#E30613]", text: "text-white", label: "BRT" },
   dhl: { bg: "bg-[#FFCC00]", text: "text-[#D40511] italic", label: "DHL" },
+  fedex: { bg: "bg-[#4D148C]", text: "text-white", label: "FedEx" },
+  ups: { bg: "bg-[#351C15]", text: "text-[#FFB500]", label: "UPS" },
+  other: { bg: "bg-slate-700", text: "text-white", label: "Sped." },
 };
 
 export function CourierLogo({ courier, size = "md" }: { courier: CourierId; size?: "sm" | "md" | "lg" }) {

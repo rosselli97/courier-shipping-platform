@@ -62,7 +62,9 @@ CORS_ORIGINS=https://muvpack-web.onrender.com
 
 ## TravelBox Connector
 
-Il connettore non ufficiale al portale TravelBox Contorno è incluso in `backend/travelbox/` ed esposto dall'API sotto `/api/travelbox/*` (solo super admin, oppure header `X-TravelBox-Key`). Nel frontend c'è la pagina admin `/admin/travelbox` con rubrica, preventivi reali, creazione in carrello ed etichette PDF.
+Il connettore non ufficiale al portale TravelBox Contorno è incluso in `backend/travelbox/` ed esposto dall'API sotto `/api/travelbox/*` (solo super admin, oppure header `X-TravelBox-Key`).
+
+I prezzi reali sono integrati nel flusso MUVPACK: per gli utenti autenticati `POST /api/quote` usa gli stessi campi del calcolatore (CAP partenza/destinazione, peso, dimensioni, pallet) e risponde con le offerte TravelBox; gli utenti anonimi vedono le tariffe demo. La pagina admin `/admin/travelbox` gestisce storico, carrello ed etichette PDF.
 
 - `GET /api/travelbox/health`
 - `GET /api/travelbox/shipments?date_from=2026-01-01&date_to=2026-12-31`

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from .geo import city_for_cap
 from .models import Contact, Shipment, TrackingEvent, User, WalletTx
 from .notify import send_shipment_email
-from .pricing import quote_for_courier
+from .pricing import COURIERS, quote_for_courier
 from .schemas import ShipmentCreate
 
 STAGES = [
@@ -72,6 +72,8 @@ def create_shipment(db: Session, user: User, body: ShipmentCreate, as_admin: boo
     if not as_admin:
         if user.status != "active":
             raise HTTPException(status_code=403, detail="Account sospeso")
+    if body.courier not in COURIERS:
+        raise HTTPException(status_code=422, detail="Corriere non disponibile per la creazione locale")
 
     quote = quote_for_courier(db, body, body.courier, user)
     if not as_admin and user.wallet_balance < quote.price:

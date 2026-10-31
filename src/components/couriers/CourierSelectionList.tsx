@@ -21,8 +21,8 @@ export default function CourierSelectionList({ quotes, onSelect, pendingCourier 
         const best = q.price === cheapest;
         return (
           <motion.article
-            key={q.courier}
-            data-testid={`courier-card-${q.courier}`}
+            key={`${q.id ?? q.courier}-${i}`}
+            data-testid={`courier-card-${q.courier}-${i}`}
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -44,7 +44,12 @@ export default function CourierSelectionList({ quotes, onSelect, pendingCourier 
             <div className="flex items-start gap-4">
               <CourierLogo courier={q.courier} />
               <div className="min-w-0 flex-1">
-                <h3 className="font-heading text-base font-semibold text-navy">{q.courier_name}</h3>
+                <h3 className="flex items-center gap-2 font-heading text-base font-semibold text-navy">
+                  {q.courier_name}
+                  {q.source === "travelbox" && (
+                    <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand">TravelBox</span>
+                  )}
+                </h3>
                 <p className="text-xs text-muted-foreground">{q.service_name}</p>
                 <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-navy">
                   {q.courier === "dhl" ? <Zap className="size-4 text-brand" /> : <Clock className="size-4 text-brand" />}
@@ -52,10 +57,10 @@ export default function CourierSelectionList({ quotes, onSelect, pendingCourier 
                 </p>
               </div>
               <div className="text-right">
-                <p data-testid={`courier-price-${q.courier}`} className="font-heading text-2xl font-bold text-navy">
+                <p data-testid={`courier-price-${q.courier}-${i}`} className="font-heading text-2xl font-bold text-navy">
                   {eur(q.price)}
                 </p>
-                <p className="text-[11px] text-muted-foreground">IVA esclusa</p>
+                <p className="text-[11px] text-muted-foreground">{q.price_includes_vat ? "IVA inclusa" : "IVA esclusa"}</p>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -67,10 +72,12 @@ export default function CourierSelectionList({ quotes, onSelect, pendingCourier 
             </div>
             <div className="mt-4 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
               <p data-testid="courier-price-breakdown" className="font-mono text-[11px] text-muted-foreground">
-                Tariffa {eur(q.base_cost)} · Carburante {eur(q.fuel_surcharge)} · Servizio {eur(q.markup)}
+                {q.source === "travelbox"
+                  ? `Netto ${eur(q.base_cost)} · IVA ${eur(q.fuel_surcharge)}`
+                  : `Tariffa ${eur(q.base_cost)} · Carburante ${eur(q.fuel_surcharge)} · Servizio ${eur(q.markup)}`}
               </p>
               <Button
-                data-testid={`courier-select-btn-${q.courier}`}
+                data-testid={`courier-select-btn-${q.courier}-${i}`}
                 onClick={() => onSelect(q)}
                 disabled={pendingCourier === q.courier}
                 className="h-10 bg-brand px-4 font-semibold text-white transition-colors hover:bg-brand-hover"

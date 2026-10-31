@@ -24,6 +24,7 @@ export default function Couriers() {
     width_cm: Number(params.get("wi") ?? 0),
     height_cm: Number(params.get("h") ?? 0),
     is_pallet: params.get("p") === "1",
+    source: me.data ? "travelbox" : "local",
   };
 
   const quote = useQuery({
@@ -36,6 +37,10 @@ export default function Couriers() {
     if (!me.data) {
       toast.info("Accedi con il tuo account Business per spedire");
       navigate(`/login?next=${encodeURIComponent(`/spedisci?${params.toString()}`)}`);
+      return;
+    }
+    if (q.source === "travelbox") {
+      toast.info("Prezzo reale TravelBox verificato. La creazione verrà collegata al portale.");
       return;
     }
     setSelected(q);
@@ -59,8 +64,8 @@ export default function Couriers() {
             className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-brand/30 bg-brand-soft px-4 py-3 text-sm transition-colors hover:border-brand"
           >
             <span>
-              <b className="text-navy">Prezzi reali TravelBox</b>
-              <span className="block text-xs text-muted-foreground">Offerte del portale con mittente e destinatario reali</span>
+              <b className="text-navy">Pannello TravelBox</b>
+              <span className="block text-xs text-muted-foreground">Storico spedizioni, carrello ed etichette PDF</span>
             </span>
             <span className="shrink-0 font-semibold text-brand">Apri →</span>
           </Link>
@@ -80,7 +85,18 @@ export default function Couriers() {
               Pallet · {quote.data.pallet_zone}
             </span>
           )}
+          {quote.data?.provider === "travelbox" && (
+            <span data-testid="couriers-travelbox-source" className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand">
+              Prezzi reali TravelBox · IVA inclusa
+            </span>
+          )}
         </div>
+
+        {quote.data?.notice && (
+          <p data-testid="couriers-notice" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            {quote.data.notice}
+          </p>
+        )}
 
         <div className="mt-6">
           {quote.isPending && (
@@ -93,12 +109,18 @@ export default function Couriers() {
               Impossibile calcolare la tariffa. Controlla i dati del pacco e riprova.
             </div>
           )}
-          {quote.data && !quote.isError && (
+          {quote.data && !quote.isError && quote.data.quotes.length > 0 && (
             <CourierSelectionList quotes={quote.data.quotes} onSelect={onSelect} />
+          )}
+          {quote.data && !quote.isError && quote.data.quotes.length === 0 && (
+            <div className="rounded-2xl border border-dashed bg-card p-6 text-center text-sm text-muted-foreground">
+              {quote.data.notice ?? "Nessuna offerta disponibile per questa tratta."}
+            </div>
           )}
         </div>
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Peso volumetrico calcolato come L×P×A / 5000. Prezzi IVA esclusa.
+          Peso volumetrico calcolato come L×P×A / 5000.{" "}
+          {quote.data?.provider === "travelbox" ? "Prezzi reali TravelBox IVA inclusa." : "Prezzi IVA esclusa."}
         </p>
       </main>
       <ShipmentDialog quote={selected} request={req} role={me.data?.role ?? "reseller"} prefillContactId={params.get("c")} onClose={() => setSelected(null)} />

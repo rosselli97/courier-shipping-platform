@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Info } from "lucide-react";
 import DashboardShell from "@/components/DashboardShell";
 import CalculatorForm, { type CalcValues } from "@/components/CalculatorForm";
@@ -10,7 +11,7 @@ import type { CourierQuote, QuoteRequest, QuoteResponse } from "@/lib/types";
 
 const toReq = (v: CalcValues): QuoteRequest => ({
   origin_cap: v.o, dest_cap: v.d, weight_kg: Number(v.w), length_cm: Number(v.l), width_cm: Number(v.wi), height_cm: Number(v.h),
-  is_pallet: v.p === "1",
+  is_pallet: v.p === "1", source: "travelbox",
 });
 
 export default function AdminNewShipment() {
@@ -46,10 +47,23 @@ export default function AdminNewShipment() {
           {req && quote.data && !quote.isError && (
             <>
               <p className="mb-3 text-sm text-muted-foreground">
-                {quote.data.origin_city} → {quote.data.dest_city} · peso tassabile <b className="text-navy">{quote.data.billable_weight_kg} kg</b> · prezzi a costo
+                {quote.data.origin_city} → {quote.data.dest_city} · peso tassabile <b className="text-navy">{quote.data.billable_weight_kg} kg</b>
+                {quote.data.provider === "travelbox" ? " · prezzi reali TravelBox (IVA inclusa)" : " · prezzi a costo"}
                 {quote.data.is_pallet && <> · <b className="text-navy">Pallet, {quote.data.pallet_zone}</b></>}
               </p>
-              <CourierSelectionList quotes={quote.data.quotes} onSelect={setSelected} />
+              {quote.data.notice && (
+                <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">{quote.data.notice}</p>
+              )}
+              <CourierSelectionList
+                quotes={quote.data.quotes}
+                onSelect={(q: CourierQuote) => {
+                  if (q.source === "travelbox") {
+                    toast.info("Prezzo reale TravelBox verificato. La creazione verrà collegata al portale.");
+                    return;
+                  }
+                  setSelected(q);
+                }}
+              />
             </>
           )}
         </div>
