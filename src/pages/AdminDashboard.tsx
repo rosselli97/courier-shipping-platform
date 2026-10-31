@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion } from "motion/react";
@@ -9,7 +8,7 @@ import PalletRates from "@/components/PalletRates";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import DashboardShell from "@/components/DashboardShell";
 import { CourierLogo } from "@/components/brand";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -65,7 +64,7 @@ function MarkupRules() {
     setDraft(current.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
   return (
-    <section id="regole" data-testid="admin-markup-rules-card" className="scroll-mt-28 rounded-2xl border bg-card p-6 shadow-sm">
+    <section data-testid="admin-markup-rules-card" className="rounded-2xl border bg-card p-6 shadow-sm">
       <h2 className="font-heading text-lg font-semibold text-navy">Regole di ricarico standard</h2>
       <p className="text-sm text-muted-foreground">Margine applicato al costo corriere. Puoi personalizzarlo per singolo cliente dal pulsante «Listino».</p>
       <div className="mt-5 space-y-3">
@@ -118,18 +117,6 @@ export default function AdminDashboard() {
   const [walletAmt, setWalletAmt] = useState("50");
   const [newOpen, setNewOpen] = useState(false);
   const [nc, setNc] = useState<ClientCreate>(EMPTY_CLIENT);
-  const location = useLocation();
-
-  useEffect(() => {
-    if (!location.hash) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-    const target = document.getElementById(location.hash.slice(1));
-    if (target) {
-      requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth", block: "start" }));
-    }
-  }, [location.hash]);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin"] });
 
@@ -166,16 +153,7 @@ export default function AdminDashboard() {
   const chart = (k?.monthly ?? []).map((m) => ({ ...m, label: monthLabel(m.month) }));
 
   return (
-    <DashboardShell
-      role="admin"
-      title="Panoramica"
-      subtitle="Monitora performance, ricarichi e clienti B2B."
-      actions={
-        <Link to="/admin/nuova-spedizione" className={cn(buttonVariants(), "h-11 bg-brand px-5 font-semibold text-white hover:bg-brand-hover")}>
-          <Plus className="size-4" /> Nuova spedizione
-        </Link>
-      }
-    >
+    <DashboardShell role="admin" title="Centro di controllo" subtitle="Panoramica finanziaria, ricarichi e clienti B2B.">
       <div className="grid gap-4 md:grid-cols-3">
         <Kpi testId="admin-kpi-revenue" label="Ricavi totali" value={k ? eur(k.total_revenue) : "—"} hint={k ? `${k.total_shipments} spedizioni` : ""} icon={Coins} delay={0} />
         <Kpi testId="admin-kpi-carrier-costs" label="Costi corrieri" value={k ? eur(k.courier_costs) : "—"} hint="Tariffe + supplemento carburante" icon={Receipt} delay={0.06} />
@@ -228,7 +206,7 @@ export default function AdminDashboard() {
         <PalletRates />
       </div>
 
-      <section id="clienti" className="mt-6 scroll-mt-28 rounded-2xl border bg-card shadow-sm">
+      <section className="mt-6 rounded-2xl border bg-card shadow-sm">
         <div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <h2 className="font-heading text-lg font-semibold text-navy">Clienti B2B</h2>

@@ -9,8 +9,6 @@ import ResellerDashboard from "@/pages/ResellerDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminNewShipment from "@/pages/AdminNewShipment";
 import AdminShipments from "@/pages/AdminShipments";
-import AdminInvoices from "@/pages/AdminInvoices";
-import AdminSettings from "@/pages/AdminSettings";
 import AddressBook from "@/pages/AddressBook";
 import Support from "@/pages/Support";
 import { RequireRole } from "@/components/DashboardShell";
@@ -33,8 +31,6 @@ export default function App() {
         <Route path="/admin/assistenza" element={<RequireRole role="admin"><Support role="admin" /></RequireRole>} />
         <Route path="/admin/rubrica" element={<RequireRole role="admin"><AddressBook role="admin" /></RequireRole>} />
         <Route path="/admin/spedizioni" element={<RequireRole role="admin"><AdminShipments /></RequireRole>} />
-        <Route path="/admin/fatture" element={<RequireRole role="admin"><AdminInvoices /></RequireRole>} />
-        <Route path="/admin/impostazioni" element={<RequireRole role="admin"><AdminSettings /></RequireRole>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster richColors />

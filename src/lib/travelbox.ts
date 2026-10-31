@@ -118,16 +118,6 @@ export interface TravelBoxLabelGroup {
   name: string;
 }
 
-export interface TravelBoxInvoice {
-  number?: string | null;
-  date?: string | null;
-  customer?: string | null;
-  amount?: TravelBoxMoney | null;
-  pdf_url?: string | null;
-}
-
-export const TB_PORTAL_URL = "https://www.travelboxcontorno.it";
-
 export interface TravelBoxCheckoutPayload {
   origin_cap: string;
   dest_cap: string;
@@ -163,8 +153,6 @@ export const tbCreateShipment = (payload: { draft: TravelBoxDraft; offer_id?: st
 
 export const tbCheckout = (payload: TravelBoxCheckoutPayload) =>
   apiPost<TravelBoxCheckoutResult>(`${TB}/checkout`, payload);
-
-export const tbInvoices = () => apiGet<TravelBoxInvoice[]>(`${TB}/invoices`);
 
 export function tbCheckoutLabelHref(result: TravelBoxCheckoutResult): string | null {
   if (result.shipment_id) return `${API_BASE}/travelbox/shipments/${encodeURIComponent(result.shipment_id)}/label`;
