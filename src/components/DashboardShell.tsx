@@ -93,6 +93,7 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
   const work = role === "admin" ? ADMIN_WORK : RESELLER_WORK;
   const manage = role === "admin" ? ADMIN_MANAGE : RESELLER_MANAGE;
   const company = me.data?.company_name || "MUVPACK";
+  const displayName = role === "admin" ? `${company} Admin` : company;
   const avatar = role === "admin" ? "MA" : initials(company);
   const roleLabel = role === "admin" ? "Super amministratore" : "Rivenditore";
   const profileHref = role === "admin" ? "/admin/impostazioni" : "/dashboard";
@@ -159,7 +160,7 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
               {avatar}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold text-white">{company}</span>
+              <span className="block truncate text-sm font-semibold text-white">{displayName}</span>
               <span className="block truncate text-xs text-slate-400">{roleLabel}</span>
             </span>
             <ChevronDown className="size-4 shrink-0 text-slate-400" />
@@ -202,7 +203,7 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
                 {avatar}
               </span>
               <span className="min-w-0 flex-1">
-                <span data-testid="shell-user-company" className="block truncate text-sm font-semibold text-white">{company}</span>
+                <span data-testid="shell-user-company" className="block truncate text-sm font-semibold text-white">{displayName}</span>
                 <span className="block truncate text-xs text-slate-400">{me.data?.email}</span>
               </span>
               <ChevronDown className="size-4 shrink-0 text-slate-400" />

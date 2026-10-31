@@ -121,7 +121,10 @@ export default function AdminDashboard() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!location.hash) return;
+    if (!location.hash) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     const target = document.getElementById(location.hash.slice(1));
     if (target) {
       requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth", block: "start" }));
