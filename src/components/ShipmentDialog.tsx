@@ -225,7 +225,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
               {create.isPending || createTravelBox.isPending
                 ? "Creazione…"
                 : quote?.source === "travelbox"
-                  ? `Conferma in carrello TravelBox · ${quote ? eur(quote.price) : ""}`
+                  ? `Crea spedizione TravelBox · ${quote ? eur(quote.price) : ""}`
                   : isAdmin
                     ? `Crea spedizione · costo ${quote ? eur(quote.price) : ""}`
                     : `Conferma e paga ${quote ? eur(quote.price) : ""}`}

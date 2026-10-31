@@ -25,14 +25,14 @@ export default function AdminNewShipment() {
   });
 
   return (
-    <DashboardShell role="admin" title="Nuova spedizione" subtitle="Spedizioni interne MUVPACK: addebitate a costo corriere, senza portafoglio.">
+    <DashboardShell role="admin" title="Nuova spedizione" subtitle="Compila i campi: la spedizione viene creata direttamente su TravelBox.">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,440px)_1fr] xl:items-start">
         <CalculatorForm onSubmit={(v, c) => { setReq(toReq(v)); setContactId(c); }} />
         <div data-testid="admin-new-shipment-results">
           {!req && (
             <div className="flex items-start gap-3 rounded-2xl border border-dashed bg-card p-6 text-sm text-muted-foreground">
               <Info className="mt-0.5 size-4 shrink-0 text-brand" />
-              Inserisci CAP, peso e dimensioni e premi «Confronta corrieri»: vedrai il costo reale di Poste Italiane, BRT e DHL senza ricarico.
+              Inserisci CAP, peso e dimensioni e premi «Confronta corrieri»: vedrai le offerte reali TravelBox per la tratta.
             </div>
           )}
           {req && quote.isPending && (

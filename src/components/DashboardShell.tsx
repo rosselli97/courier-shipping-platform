@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { BookUser, ChevronDown, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, ShieldCheck, Truck } from "lucide-react";
+import { BookUser, ChevronDown, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, ShieldCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BrandLogo } from "@/components/brand";
 import { useMe } from "@/lib/auth";
@@ -28,7 +28,6 @@ const ADMIN_NAV: NavItem[] = [
   { to: "/admin", label: "Centro di controllo", icon: ShieldCheck, testId: "nav-admin", hint: "KPI, ricarichi e clienti B2B" },
   { to: "/admin/nuova-spedizione", label: "Nuova spedizione", icon: Calculator, testId: "nav-admin-new-shipment", hint: "Spedisci a costo corriere" },
   { to: "/admin/spedizioni", label: "Spedizioni effettuate", icon: Package, testId: "nav-admin-shipments", hint: "Elenco ed etichette PDF" },
-  { to: "/admin/travelbox", label: "TravelBox", icon: Truck, testId: "nav-admin-travelbox", hint: "Prezzi reali e etichette dal portale" },
   { to: "/admin/rubrica", label: "Rubrica destinatari", icon: BookUser, testId: "nav-admin-contacts", hint: "Aggiungi, modifica, elimina" },
   { to: "/admin/assistenza", label: "Assistenza ticket", icon: LifeBuoy, testId: "nav-admin-support", hint: "Rispondi ai rivenditori" },
 ];

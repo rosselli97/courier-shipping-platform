@@ -11,7 +11,6 @@ import AdminNewShipment from "@/pages/AdminNewShipment";
 import AdminShipments from "@/pages/AdminShipments";
 import AddressBook from "@/pages/AddressBook";
 import Support from "@/pages/Support";
-import TravelBox from "@/pages/TravelBox";
 import { RequireRole } from "@/components/DashboardShell";
 
 // One <Route> per page in src/pages; BrowserRouter already wraps this in main.tsx.
@@ -32,7 +31,6 @@ export default function App() {
         <Route path="/admin/assistenza" element={<RequireRole role="admin"><Support role="admin" /></RequireRole>} />
         <Route path="/admin/rubrica" element={<RequireRole role="admin"><AddressBook role="admin" /></RequireRole>} />
         <Route path="/admin/spedizioni" element={<RequireRole role="admin"><AdminShipments /></RequireRole>} />
-        <Route path="/admin/travelbox" element={<RequireRole role="admin"><TravelBox /></RequireRole>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster richColors />
