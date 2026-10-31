@@ -45,6 +45,7 @@ USER_AGENT = (
 )
 
 logger = logging.getLogger("travelbox.booking")
+logger.setLevel(logging.INFO)
 
 SHIPMENT_FILTERS = (
     "data_dal",
@@ -778,9 +779,10 @@ class TravelBoxClient:
         )
         if response.status_code >= 400:
             logger.warning(
-                "TravelBox submit failed status=%s action=%s headers=%s body_len=%s body=%s",
+                "TravelBox submit failed status=%s action=%s payload=%s headers=%s body_len=%s body=%s",
                 response.status_code,
                 action,
+                {name: fields.get(name) for name in key_fields if name in fields},
                 dict(response.headers),
                 len(response.text),
                 parsers.clean(response.text)[:500],
