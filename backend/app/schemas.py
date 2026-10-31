@@ -371,6 +371,9 @@ class TravelBoxCheckoutRequest(QuoteRequest):
     sender_email: str | None = None
     sender_phone: str | None = None
     sender_contact: str | None = None
+    description: str | None = None
+    pickup_date: str | None = None
+    pickup_slot: Literal["9-12", "12-15", "15-18", "18-21"] | None = None
     confirm: bool = True
 
     @field_validator("recipient_email")

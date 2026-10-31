@@ -191,6 +191,9 @@ def _build_draft(
     recipient_id: str = "0",
     recipient_city: str | None = None,
     recipient_province: str = "",
+    description: str | None = None,
+    pickup_date: str | None = None,
+    pickup_slot: str | None = None,
 ):
     from travelbox.models import Package, ShipmentDraft
 
@@ -213,6 +216,9 @@ def _build_draft(
         recipient_email=recipient_email,
         recipient_phone=recipient_phone,
         recipient_contact=recipient_contact,
+        description=description,
+        pickup_date=pickup_date,
+        pickup_slot=pickup_slot,
         packages=[
             Package(
                 pieces=1,
@@ -384,6 +390,9 @@ def create_travelbox_shipment(
     sender_email: str | None = None,
     sender_phone: str | None = None,
     sender_contact: str | None = None,
+    description: str | None = None,
+    pickup_date: str | None = None,
+    pickup_slot: str | None = None,
     confirm: bool = True,
 ):
     if not TRAVELBOX_QUOTES_ENABLED or not _settings.userid or not _settings.password:
@@ -432,6 +441,9 @@ def create_travelbox_shipment(
         recipient_id=recipient_id,
         recipient_city=city,
         recipient_province=province,
+        description=description,
+        pickup_date=pickup_date,
+        pickup_slot=pickup_slot,
     )
     try:
         with _client_lock:

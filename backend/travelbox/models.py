@@ -110,6 +110,9 @@ class ShipmentDraft(BaseModel):
     packages: list[Package] = Field(min_length=1)
     service_type: Literal["nazionale", "importexport"] = "nazionale"
     notes: Optional[str] = None
+    description: Optional[str] = None
+    pickup_date: Optional[str] = None
+    pickup_slot: Optional[str] = None
     declared_value: Optional[Decimal] = None
     cash_on_delivery: Optional[Decimal] = None
     insurance: bool = False

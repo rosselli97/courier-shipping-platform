@@ -71,6 +71,9 @@ def checkout(body: TravelBoxCheckoutRequest, user: User = Depends(get_active_use
             body.sender_email,
             body.sender_phone,
             body.sender_contact,
+            body.description,
+            body.pickup_date,
+            body.pickup_slot,
             body.confirm,
         )
     except AuthError as exc:

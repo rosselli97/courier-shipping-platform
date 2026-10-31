@@ -715,6 +715,9 @@ class TravelBoxClient:
             "destinatario[contatto]": draft.recipient_contact,
             "destinatario[codice_fiscale]": draft.recipient_tax_code,
             "destinatario[partita_iva]": draft.recipient_vat,
+            "descrizione_beni": draft.description,
+            "data_ritiro": draft.pickup_date,
+            "fascia_oraria_ritiro": draft.pickup_slot,
         }
         for name, value in overrides.items():
             if value:

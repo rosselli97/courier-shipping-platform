@@ -137,6 +137,9 @@ export interface TravelBoxCheckoutPayload {
   sender_email?: string | null;
   sender_phone?: string | null;
   sender_contact?: string | null;
+  description?: string | null;
+  pickup_date?: string | null;
+  pickup_slot?: "9-12" | "12-15" | "15-18" | "18-21" | null;
   confirm?: boolean;
 }
 
