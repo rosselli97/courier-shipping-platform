@@ -118,6 +118,30 @@ export interface TravelBoxLabelGroup {
   name: string;
 }
 
+export interface TravelBoxCheckoutPayload {
+  origin_cap: string;
+  dest_cap: string;
+  weight_kg: number;
+  length_cm: number;
+  width_cm: number;
+  height_cm: number;
+  is_pallet: boolean;
+  offer_id: string;
+  recipient_name: string;
+  recipient_address: string;
+  recipient_email?: string | null;
+  confirm?: boolean;
+}
+
+export interface TravelBoxCheckoutResult {
+  status: "preview" | "submitted";
+  message: string;
+  reference?: string | null;
+  tracking_number?: string | null;
+  shipment_id?: string | null;
+  label_token?: string | null;
+}
+
 const TB = "/travelbox";
 
 export const tbHealth = () => apiGet<TravelBoxHealth>(`${TB}/health`);
@@ -126,6 +150,15 @@ export const tbLabelGroups = () => apiGet<TravelBoxLabelGroup[]>(`${TB}/label-gr
 export const tbQuote = (draft: TravelBoxDraft) => apiPost<TravelBoxQuoteResult>(`${TB}/shipments/quote`, draft);
 export const tbCreateShipment = (payload: { draft: TravelBoxDraft; offer_id?: string; confirm: boolean }) =>
   apiPost<TravelBoxCreateResult>(`${TB}/shipments`, payload);
+
+export const tbCheckout = (payload: TravelBoxCheckoutPayload) =>
+  apiPost<TravelBoxCheckoutResult>(`${TB}/checkout`, payload);
+
+export function tbCheckoutLabelHref(result: TravelBoxCheckoutResult): string | null {
+  if (result.shipment_id) return `${API_BASE}/travelbox/shipments/${encodeURIComponent(result.shipment_id)}/label`;
+  if (result.label_token) return tbLabelTokenHref(result.label_token);
+  return null;
+}
 
 export const tbShipments = (params: { page: number; dateFrom: string; dateTo: string; refresh?: boolean }) => {
   const q = new URLSearchParams({

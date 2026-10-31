@@ -3,15 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CourierLogo } from "@/components/brand";
 import { apiPost } from "@/lib/api";
 import { useContacts } from "@/lib/contacts";
 import { cn } from "@/lib/utils";
-import { BookUser } from "lucide-react";
+import { BookUser, CheckCircle2, Download } from "lucide-react";
 import { eur, errorMessage } from "@/lib/format";
+import { tbCheckout, tbCheckoutLabelHref, type TravelBoxCheckoutResult } from "@/lib/travelbox";
 import type { Contact, CourierQuote, QuoteRequest, ResellerShipment, ShipmentCreate } from "@/lib/types";
 
 interface Props {
@@ -31,7 +32,11 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
+  const [tbResult, setTbResult] = useState<TravelBoxCheckoutResult | null>(null);
   const open = quote !== null;
+  useEffect(() => {
+    if (!open) setTbResult(null);
+  }, [open]);
   const contacts = useContacts(open);
   // only recipients at the quoted destination CAP can be used (the price depends on it)
   const book = (contacts.isError ? [] : contacts.data ?? []).filter((c) => c.cap === request.dest_cap);
@@ -66,13 +71,60 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
     onError: (e) => toast.error(errorMessage(e)),
   });
 
+  const createTravelBox = useMutation({
+    mutationFn: (body: Parameters<typeof tbCheckout>[0]) => tbCheckout(body),
+    onSuccess: (result) => {
+      setTbResult(result);
+      qc.invalidateQueries({ queryKey: ["tb"] });
+      toast.success(`Spedizione ${result.reference ?? ""} aggiunta al carrello TravelBox`, {
+        description: "Nessun pagamento eseguito: completa il checkout sul portale.",
+      });
+    },
+    onError: (e) => toast.error(errorMessage(e, "Creazione TravelBox non riuscita")),
+  });
+
   return (
     <Dialog open={quote !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent data-testid="shipment-create-dialog" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-heading text-navy">Dati destinatario</DialogTitle>
-          <DialogDescription>Completa i dati per generare la lettera di vettura.</DialogDescription>
+          <DialogDescription>
+            {quote?.source === "travelbox"
+              ? "La spedizione verrà creata nel carrello TravelBox, senza pagamento."
+              : "Completa i dati per generare la lettera di vettura."}
+          </DialogDescription>
         </DialogHeader>
+        {tbResult ? (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
+              <div>
+                <p className="font-semibold">Spedizione creata in carrello TravelBox</p>
+                <p>{tbResult.message}</p>
+              </div>
+            </div>
+            {(tbResult.reference || tbResult.tracking_number) && (
+              <div className="rounded-xl bg-muted p-4 text-sm">
+                {tbResult.reference && <p className="font-semibold text-navy">{tbResult.reference}</p>}
+                {tbResult.tracking_number && (
+                  <p className="text-muted-foreground">Tracking: <span className="font-mono">{tbResult.tracking_number}</span></p>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Nessun pagamento eseguito: la spedizione è nel carrello TravelBox. Completa il checkout sul portale.
+            </p>
+            <DialogFooter className="gap-2">
+              {tbCheckoutLabelHref(tbResult) && (
+                <a href={tbCheckoutLabelHref(tbResult)!} download className={cn(buttonVariants(), "h-11 gap-2 bg-navy text-white hover:bg-navy-light")}>
+                  <Download className="size-4" /> Etichetta PDF
+                </a>
+              )}
+              <Button variant="outline" onClick={onClose} className="h-11">Chiudi</Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <>
         {quote && (
           <div className="flex items-center gap-3 rounded-xl bg-muted p-3">
             <CourierLogo courier={quote.courier} size="sm" />
@@ -80,7 +132,10 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
               <p className="font-semibold text-navy">{quote.courier_name}</p>
               <p className="text-muted-foreground">{request.origin_cap} → {request.dest_cap} · {request.weight_kg} kg</p>
             </div>
-            <p className="font-heading text-lg font-bold text-navy">{eur(quote.price)}</p>
+            <div className="text-right">
+              <p className="font-heading text-lg font-bold text-navy">{eur(quote.price)}</p>
+              <p className="text-[11px] text-muted-foreground">{quote.price_includes_vat ? "IVA inclusa" : "IVA esclusa"}</p>
+            </div>
           </div>
         )}
         {book.length > 0 && (
@@ -115,6 +170,27 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
           onSubmit={(e) => {
             e.preventDefault();
             if (!quote) return;
+            if (quote.source === "travelbox") {
+              if (!quote.id) {
+                toast.error("Offerta TravelBox senza identificativo: ricalcola il preventivo");
+                return;
+              }
+              createTravelBox.mutate({
+                origin_cap: request.origin_cap,
+                dest_cap: request.dest_cap,
+                weight_kg: request.weight_kg,
+                length_cm: request.length_cm,
+                width_cm: request.width_cm,
+                height_cm: request.height_cm,
+                is_pallet: request.is_pallet,
+                offer_id: quote.id,
+                recipient_name: name,
+                recipient_address: address,
+                recipient_email: email.trim() || null,
+                confirm: true,
+              });
+              return;
+            }
             create.mutate({
               ...request, courier: quote.courier, recipient_name: name, recipient_address: address,
               recipient_email: email.trim() || null,
@@ -134,17 +210,30 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
             <Input id="rcp-email" type="email" data-testid="shipment-recipient-email-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mario.rossi@email.it" />
             <p className="text-xs text-muted-foreground">Riceverà il codice e il link di tracciamento appena creata la spedizione.</p>
           </div>
+          {quote?.source === "travelbox" && (
+            <p className="rounded-xl bg-brand-soft px-3 py-2 text-xs text-brand">
+              Verrà creata sul portale TravelBox e messa nel carrello. Nessun pagamento automatico. Il conto TravelBox deve avere credito sufficiente.
+            </p>
+          )}
           <DialogFooter>
             <Button
               type="submit"
               data-testid="shipment-create-submit-button"
-              disabled={create.isPending}
+              disabled={create.isPending || createTravelBox.isPending}
               className="h-11 w-full bg-brand font-semibold text-white hover:bg-brand-hover"
             >
-              {create.isPending ? "Creazione…" : isAdmin ? `Crea spedizione · costo ${quote ? eur(quote.price) : ""}` : `Conferma e paga ${quote ? eur(quote.price) : ""}`}
+              {create.isPending || createTravelBox.isPending
+                ? "Creazione…"
+                : quote?.source === "travelbox"
+                  ? `Conferma in carrello TravelBox · ${quote ? eur(quote.price) : ""}`
+                  : isAdmin
+                    ? `Crea spedizione · costo ${quote ? eur(quote.price) : ""}`
+                    : `Conferma e paga ${quote ? eur(quote.price) : ""}`}
             </Button>
           </DialogFooter>
         </form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

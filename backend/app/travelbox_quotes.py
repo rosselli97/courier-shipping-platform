@@ -72,6 +72,10 @@ def _configured_sender() -> dict[str, str] | None:
             "city": TRAVELBOX_SENDER_CITY,
             "cap": TRAVELBOX_SENDER_CAP,
             "province": TRAVELBOX_SENDER_PROVINCE,
+            "name": "",
+            "street": "",
+            "email": "",
+            "phone": "",
         }
     return None
 
@@ -79,8 +83,6 @@ def _configured_sender() -> dict[str, str] | None:
 def _resolve_sender() -> dict[str, str] | None:
     global _sender_cache
     configured = _configured_sender()
-    if configured:
-        return configured
 
     now = time.monotonic()
     with _sender_lock:
@@ -92,7 +94,7 @@ def _resolve_sender() -> dict[str, str] | None:
             entries = get_client().address_book()
     except Exception:
         logger.exception("TravelBox: impossibile leggere la rubrica per il mittente")
-        return None
+        return configured
 
     fallback = None
     for entry in entries:
@@ -104,14 +106,24 @@ def _resolve_sender() -> dict[str, str] | None:
             "city": party.city,
             "cap": party.postal_code,
             "province": party.province,
+            "name": party.name or "",
+            "street": party.street or "",
+            "email": party.email or "",
+            "phone": party.phone or "",
         }
         if fallback is None:
             fallback = data
-        if "mitt" in (entry.kind or "").lower() or not entry.kind:
+        if configured and entry.id == configured["id"]:
+            with _sender_lock:
+                _sender_cache = (now, data)
+            return data
+        if not configured and ("mitt" in (entry.kind or "").lower() or not entry.kind):
             with _sender_lock:
                 _sender_cache = (now, data)
             return data
 
+    if configured:
+        return configured
     if fallback is not None:
         with _sender_lock:
             _sender_cache = (now, fallback)
@@ -132,6 +144,49 @@ def _cache_set(key: tuple, value: QuoteResponse) -> None:
         return
     with _cache_lock:
         _cache[key] = (time.monotonic() + TRAVELBOX_QUOTE_CACHE_TTL, value)
+
+
+def _build_draft(
+    req: QuoteRequest,
+    sender: dict[str, str],
+    *,
+    recipient_name: str | None = None,
+    recipient_street: str | None = None,
+    recipient_email: str | None = None,
+    recipient_id: str = "0",
+    recipient_city: str | None = None,
+    recipient_province: str = "",
+):
+    from travelbox.models import Package, ShipmentDraft
+
+    return ShipmentDraft(
+        sender_id=sender["id"],
+        sender_name=sender.get("name") or None,
+        sender_street=sender.get("street") or None,
+        sender_email=sender.get("email") or None,
+        sender_phone=sender.get("phone") or None,
+        recipient_id=recipient_id,
+        sender_city=city_for_cap(req.origin_cap),
+        sender_cap=req.origin_cap,
+        sender_province="",
+        recipient_city=recipient_city or city_for_cap(req.dest_cap),
+        recipient_cap=req.dest_cap,
+        recipient_province=recipient_province,
+        recipient_name=recipient_name,
+        recipient_street=recipient_street,
+        recipient_email=recipient_email,
+        packages=[
+            Package(
+                pieces=1,
+                weight_kg=req.weight_kg,
+                width_cm=req.width_cm,
+                height_cm=req.height_cm,
+                length_cm=req.length_cm,
+                type="pallet" if req.is_pallet else "pacchi",
+            )
+        ],
+        service_type="nazionale",
+    )
 
 
 def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse | None:
@@ -160,29 +215,7 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
         logger.warning("TravelBox: nessun mittente configurato o disponibile in rubrica")
         return None
 
-    from travelbox.models import Package, ShipmentDraft
-
-    draft = ShipmentDraft(
-        sender_id=sender["id"],
-        recipient_id="0",
-        sender_city=city_for_cap(req.origin_cap),
-        sender_cap=req.origin_cap,
-        sender_province="",
-        recipient_city=city_for_cap(req.dest_cap),
-        recipient_cap=req.dest_cap,
-        recipient_province="",
-        packages=[
-            Package(
-                pieces=1,
-                weight_kg=req.weight_kg,
-                width_cm=req.width_cm,
-                height_cm=req.height_cm,
-                length_cm=req.length_cm,
-                type="pallet" if req.is_pallet else "pacchi",
-            )
-        ],
-        service_type="nazionale",
-    )
+    draft = _build_draft(req, sender)
 
     try:
         with _client_lock:
@@ -230,3 +263,70 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
     )
     _cache_set(key, response)
     return response
+
+
+def create_travelbox_shipment(
+    req: QuoteRequest,
+    offer_id: str,
+    recipient_name: str,
+    recipient_address: str,
+    recipient_email: str | None,
+    confirm: bool = True,
+):
+    if not TRAVELBOX_QUOTES_ENABLED or not _settings.userid or not _settings.password:
+        return None
+
+    sender = _resolve_sender()
+    if sender is None:
+        return None
+
+    city = city_for_cap(req.dest_cap)
+    province = ""
+    client = get_client()
+    created_recipient = False
+    with _client_lock:
+        resolved = client.resolve_comune(req.dest_cap, city)
+        if resolved:
+            city = str(resolved.get("nome") or city)
+            province = str(resolved.get("provincia") or "")
+        recipient_id = client.find_recipient(recipient_name, recipient_address, req.dest_cap)
+        if not recipient_id:
+            recipient_id = client.create_recipient(
+                name=recipient_name,
+                street=recipient_address,
+                cap=req.dest_cap,
+                city=city,
+                province=province,
+                email=recipient_email,
+            )
+            created_recipient = True
+
+    draft = _build_draft(
+        req,
+        sender,
+        recipient_name=recipient_name,
+        recipient_street=recipient_address,
+        recipient_email=recipient_email,
+        recipient_id=recipient_id,
+        recipient_city=city,
+        recipient_province=province,
+    )
+    try:
+        with _client_lock:
+            result = client.create_shipment(draft, offer_id, confirm)
+    except Exception:
+        if created_recipient:
+            with _client_lock:
+                try:
+                    client.delete_recipient(recipient_id)
+                except Exception:
+                    logger.exception("TravelBox: impossibile rimuovere il destinatario temporaneo")
+        raise
+
+    try:
+        from travelbox.api import clear_cache
+
+        clear_cache()
+    except Exception:
+        logger.exception("TravelBox: impossibile pulire la cache dopo la creazione")
+    return result

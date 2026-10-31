@@ -39,10 +39,6 @@ export default function Couriers() {
       navigate(`/login?next=${encodeURIComponent(`/spedisci?${params.toString()}`)}`);
       return;
     }
-    if (q.source === "travelbox") {
-      toast.info("Prezzo reale TravelBox verificato. La creazione verrà collegata al portale.");
-      return;
-    }
     setSelected(q);
   };
 

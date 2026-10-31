@@ -72,6 +72,10 @@ def cached(key: str, ttl: int, loader: Callable[[], T]) -> T:
     return value
 
 
+def clear_cache() -> None:
+    _cache.clear()
+
+
 async def run(fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     """Esegue il client sincrono senza bloccare l'event loop."""
     try:

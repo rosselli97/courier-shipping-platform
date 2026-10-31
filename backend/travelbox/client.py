@@ -318,6 +318,126 @@ class TravelBoxClient:
         """Spedizioni create ma non ancora pagate (`/ilmiocarrello`)."""
         return parsers.parse_cart(self._get_html("/ilmiocarrello"))
 
+    def resolve_comune(self, cap: str, city: str, country_code: str = "IT") -> dict[str, Any] | None:
+        for payload in (
+            {"cap": cap, "codstato": country_code},
+            {"comune": city},
+        ):
+            response = self._request(
+                "POST",
+                "/getcomuni",
+                data=payload,
+                headers={
+                    "Referer": f"{self.settings.base_url.rstrip('/')}/nuovaspedizione",
+                    "Origin": self.settings.base_url.rstrip("/"),
+                    "Accept": "application/json, text/javascript, */*; q=0.01",
+                },
+            )
+            if response.status_code >= 400:
+                continue
+            try:
+                rows = response.json().get("data") or []
+            except (ValueError, AttributeError):
+                continue
+            if not isinstance(rows, list) or not rows:
+                continue
+            wanted = parsers.clean(city).casefold()
+            match = next(
+                (row for row in rows if parsers.clean(str(row.get("nome") or "")).casefold() == wanted),
+                None,
+            )
+            if match is None:
+                candidates = [row for row in rows if len(str(row.get("provincia") or "")) == 2]
+                if len(candidates) == 1:
+                    match = candidates[0]
+            if isinstance(match, dict):
+                return match
+        return None
+
+    def find_recipient(self, name: str, street: str, cap: str) -> str | None:
+        target = (
+            parsers.clean(name).casefold(),
+            parsers.clean(street).casefold(),
+            cap.strip(),
+        )
+        for entry in self.address_book():
+            party = entry.party
+            if not entry.id or not party:
+                continue
+            current = (
+                parsers.clean(party.name or "").casefold(),
+                parsers.clean(party.street or "").casefold(),
+                (party.postal_code or "").strip(),
+            )
+            if current == target:
+                return entry.id
+        return None
+
+    def create_recipient(
+        self,
+        *,
+        name: str,
+        street: str,
+        cap: str,
+        city: str,
+        province: str,
+        country_code: str = "IT",
+        email: str | None = None,
+        phone: str | None = None,
+        contact: str | None = None,
+        tax_code: str | None = None,
+        vat: str | None = None,
+    ) -> str:
+        payload = {
+            "item_id": "0",
+            "tipo": "DE",
+            "cognomenome": name,
+            "indirizzo1": street,
+            "indirizzo2": "",
+            "cap": cap,
+            "citta": city,
+            "provincia": province,
+            "codnazione": country_code,
+            "email": email or "",
+            "telefono": phone or "",
+            "cellulare": "",
+            "contatto": contact or "",
+            "codice_fiscale": tax_code or "",
+            "partita_iva": vat or "",
+        }
+        response = self._request("POST", "/mittentidestinatari_create", json=payload)
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise UpstreamError(response.status_code, response.text, "/mittentidestinatari_create") from exc
+        if response.status_code >= 400 or not data.get("success"):
+            raise WriteNotAvailable(
+                data.get("message") or "Il portale non ha creato il destinatario in rubrica"
+            )
+        found = self.find_recipient(name, street, cap)
+        if found:
+            return found
+        for key in ("id", "idcliente", "idmittentedestinatario", "item_id", "idmd"):
+            value = data.get(key)
+            if value:
+                return str(value)
+        raise WriteNotAvailable("Destinatario creato ma id non recuperabile dalla rubrica")
+
+    def delete_recipient(self, recipient_id: str) -> bool:
+        numeric = recipient_id
+        if not str(recipient_id).isdigit():
+            response = self._request("GET", f"/getmittentidestinatarimod/{recipient_id}")
+            if response.status_code < 400:
+                try:
+                    numeric = str((response.json().get("data") or {}).get("id") or numeric)
+                except (ValueError, AttributeError):
+                    pass
+        response = self._request("POST", "/mittentidestinatari_delete", json={"id": numeric})
+        try:
+            return bool(response.json().get("success"))
+        except (ValueError, AttributeError):
+            return False
+
     # -- dettaglio ---------------------------------------------------------
 
     def shipment_detail(self, shipment_id: str) -> Shipment:
@@ -540,10 +660,36 @@ class TravelBoxClient:
                 "aggiornare parse_booking_form."
             )
 
+        overrides = {
+            "mittente[cognomenome]": draft.sender_name,
+            "mittente[indirizzo]": draft.sender_street,
+            "mittente[email]": draft.sender_email,
+            "mittente[telefono]": draft.sender_phone,
+            "destinatario[cognomenome]": draft.recipient_name,
+            "destinatario[indirizzo]": draft.recipient_street,
+            "destinatario[indirizzo2]": draft.recipient_street2,
+            "destinatario[email]": draft.recipient_email,
+            "destinatario[telefono]": draft.recipient_phone,
+            "destinatario[codice_fiscale]": draft.recipient_tax_code,
+            "destinatario[partita_iva]": draft.recipient_vat,
+        }
+        for name, value in overrides.items():
+            if value:
+                fields[name] = value
+
+        if len((fields.get("mittente[telefono]") or "").strip()) < 8:
+            fields["mittente[telefono]"] = fields.get("mobile_ritiro") or "0000000000"
+        if len((fields.get("destinatario[telefono]") or "").strip()) < 8:
+            fields["destinatario[telefono]"] = "0000000000"
+        if not (fields.get("descrizione_beni") or "").strip():
+            fields["descrizione_beni"] = "Merci varie"
+
         # Il form preseleziona `bonifico`: lo sostituiamo SEMPRE con carrello.
         # Nessun endpoint di pagamento viene chiamato da questo connettore.
         fields["metodo_pagamento"] = "carrello"
 
+        credit = _parse_money(fields.get("credito_residuo"))
+        total = _parse_money(fields.get("totale_spedizione"))
         before = {item.id for item in self.cart()}
         response = self._request(
             "POST",
@@ -559,6 +705,12 @@ class TravelBoxClient:
             },
         )
         if response.status_code >= 400:
+            if credit is not None and total is not None and credit + 0.005 < total:
+                raise WriteNotAvailable(
+                    f"Credito TravelBox insufficiente: disponibili € {credit:.2f}, "
+                    f"necessari € {total:.2f}. Ricarica il conto TravelBox o scegli "
+                    "un'offerta di importo inferiore."
+                )
             raise UpstreamError(response.status_code, response.text, action)
 
         created = next((item for item in self.cart() if item.id not in before), None)
@@ -659,3 +811,17 @@ def _num(value: float | None) -> str:
     if value is None:
         return "0.00"
     return f"{value:.2f}"
+
+
+def _parse_money(value: str | None) -> float | None:
+    if not value:
+        return None
+    text = str(value).strip().replace("€", "").replace(" ", "")
+    if not text:
+        return None
+    if "," in text:
+        text = text.replace(".", "").replace(",", ".")
+    try:
+        return float(text)
+    except ValueError:
+        return None

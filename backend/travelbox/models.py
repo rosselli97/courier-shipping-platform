@@ -79,6 +79,10 @@ class ShipmentDraft(BaseModel):
 
     sender_id: str
     recipient_id: str
+    sender_name: Optional[str] = None
+    sender_street: Optional[str] = None
+    sender_email: Optional[str] = None
+    sender_phone: Optional[str] = None
     sender_city: str
     sender_cap: str
     sender_province: str
@@ -92,6 +96,15 @@ class ShipmentDraft(BaseModel):
     recipient_country: str = "Italia"
     recipient_country_code: str = "IT"
     recipient_city_id: Optional[str] = None
+    # Dati destinatario usati per compilare il form di conferma quando il
+    # destinatario non viene scelto dalla rubrica del portale.
+    recipient_name: Optional[str] = None
+    recipient_street: Optional[str] = None
+    recipient_street2: Optional[str] = None
+    recipient_email: Optional[str] = None
+    recipient_phone: Optional[str] = None
+    recipient_tax_code: Optional[str] = None
+    recipient_vat: Optional[str] = None
     packages: list[Package] = Field(min_length=1)
     service_type: Literal["nazionale", "importexport"] = "nazionale"
     notes: Optional[str] = None

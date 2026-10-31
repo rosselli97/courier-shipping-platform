@@ -345,3 +345,28 @@ class TicketReplyBody(BaseModel):
 
 class TicketStatusBody(BaseModel):
     status: TicketStatus
+
+
+class TravelBoxCheckoutRequest(QuoteRequest):
+    offer_id: str = Field(min_length=1)
+    recipient_name: str = Field(min_length=2)
+    recipient_address: str = Field(min_length=4)
+    recipient_email: str | None = None
+    confirm: bool = True
+
+    @field_validator("recipient_email")
+    @classmethod
+    def _checkout_email(cls, v: str | None) -> str | None:
+        v = (v or "").strip()
+        if v and not re.match(r"^\S+@\S+\.\S+$", v):
+            raise ValueError("invalid email")
+        return v or None
+
+
+class TravelBoxCheckoutResponse(BaseModel):
+    status: Literal["preview", "submitted"]
+    message: str
+    reference: str | None = None
+    tracking_number: str | None = None
+    shipment_id: str | None = None
+    label_token: str | None = None

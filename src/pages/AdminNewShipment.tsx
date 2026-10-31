@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { Info } from "lucide-react";
 import DashboardShell from "@/components/DashboardShell";
 import CalculatorForm, { type CalcValues } from "@/components/CalculatorForm";
@@ -54,16 +53,7 @@ export default function AdminNewShipment() {
               {quote.data.notice && (
                 <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">{quote.data.notice}</p>
               )}
-              <CourierSelectionList
-                quotes={quote.data.quotes}
-                onSelect={(q: CourierQuote) => {
-                  if (q.source === "travelbox") {
-                    toast.info("Prezzo reale TravelBox verificato. La creazione verrà collegata al portale.");
-                    return;
-                  }
-                  setSelected(q);
-                }}
-              />
+              <CourierSelectionList quotes={quote.data.quotes} onSelect={setSelected} />
             </>
           )}
         </div>

@@ -15,7 +15,7 @@ from travelbox.api import app as travelbox_app
 from .config import CORS_ORIGIN_REGEX, CORS_ORIGINS, SESSION_COOKIE
 from .database import Base, SessionLocal, engine
 from .models import User
-from .routers import admin, auth, contacts, payments, quotes, reseller, tickets, tracking
+from .routers import admin, auth, contacts, payments, quotes, reseller, tickets, tracking, travelbox_checkout
 from .security import read_session_token
 from .seed import seed
 
@@ -60,6 +60,7 @@ app.include_router(reseller.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
 app.include_router(tickets.router, prefix="/api")
+app.include_router(travelbox_checkout.router, prefix="/api")
 
 
 @app.middleware("http")
@@ -67,6 +68,7 @@ async def travelbox_guard(request: Request, call_next):
     if not request.url.path.startswith("/api/travelbox") or request.method == "OPTIONS":
         return await call_next(request)
 
+    is_checkout = request.url.path == "/api/travelbox/checkout"
     allowed = False
     token = request.cookies.get(SESSION_COOKIE)
     if token:
@@ -75,7 +77,10 @@ async def travelbox_guard(request: Request, call_next):
             db = SessionLocal()
             try:
                 user = db.get(User, user_id)
-                allowed = user is not None and user.role == "admin"
+                if user is not None:
+                    allowed = user.role == "admin" or (
+                        is_checkout and user.role == "reseller" and user.status == "active"
+                    )
             finally:
                 db.close()
 
