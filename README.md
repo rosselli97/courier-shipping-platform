@@ -60,6 +60,31 @@ MUVPACK_SESSION_SAMESITE=none
 CORS_ORIGINS=https://muvpack-web.onrender.com
 ```
 
+## TravelBox Connector
+
+Il connettore non ufficiale al portale TravelBox Contorno è incluso in `backend/travelbox/` ed esposto dall'API sotto `/api/travelbox/*` (solo super admin, oppure header `X-TravelBox-Key`).
+
+- `GET /api/travelbox/health`
+- `GET /api/travelbox/shipments?date_from=2026-01-01&date_to=2026-12-31`
+- `POST /api/travelbox/shipments/quote`
+- `POST /api/travelbox/shipments` (`confirm=false` di default)
+- `GET /api/travelbox/shipments/{id}` e `/label`
+- `GET /api/travelbox/cart`, `/rates`, `/invoices`, `/address-book`
+- `POST /api/travelbox/labels/merge`
+
+Variabili backend:
+
+```
+TRAVELBOX_BASE_URL=https://www.travelboxcontorno.it
+TRAVELBOX_USERID=...
+TRAVELBOX_PASSWORD=...
+TRAVELBOX_MIN_INTERVAL=0.8
+TRAVELBOX_CACHE_TTL=300
+TRAVELBOX_SESSION_FILE=/tmp/travelbox-session.json
+```
+
+Test offline: `cd backend && python -m pytest tests`.
+
 ## Account demo
 
 | Ruolo | Email | Password |

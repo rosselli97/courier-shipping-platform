@@ -1,15 +1,22 @@
 from __future__ import annotations
 
+import hmac
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from .config import CORS_ORIGIN_REGEX, CORS_ORIGINS
-from .database import Base, engine
+from travelbox.api import app as travelbox_app
+
+from .config import CORS_ORIGIN_REGEX, CORS_ORIGINS, SESSION_COOKIE
+from .database import Base, SessionLocal, engine
+from .models import User
 from .routers import admin, auth, contacts, payments, quotes, reseller, tickets, tracking
+from .security import read_session_token
 from .seed import seed
 
 logger = logging.getLogger("muvpack")
@@ -53,6 +60,37 @@ app.include_router(reseller.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
 app.include_router(tickets.router, prefix="/api")
+
+
+@app.middleware("http")
+async def travelbox_guard(request: Request, call_next):
+    if not request.url.path.startswith("/api/travelbox") or request.method == "OPTIONS":
+        return await call_next(request)
+
+    allowed = False
+    token = request.cookies.get(SESSION_COOKIE)
+    if token:
+        user_id = read_session_token(token)
+        if user_id:
+            db = SessionLocal()
+            try:
+                user = db.get(User, user_id)
+                allowed = user is not None and user.role == "admin"
+            finally:
+                db.close()
+
+    if not allowed:
+        expected = os.getenv("TRAVELBOX_API_KEY", "")
+        provided = request.headers.get("X-TravelBox-Key", "")
+        if expected and provided and hmac.compare_digest(expected.encode(), provided.encode()):
+            allowed = True
+
+    if not allowed:
+        return JSONResponse(status_code=403, content={"detail": "Accesso riservato all'amministrazione"})
+    return await call_next(request)
+
+
+app.mount("/api/travelbox", travelbox_app)
 
 
 @app.get("/api/health")
