@@ -82,6 +82,7 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - Dopo la creazione, MUVPACK registra una spedizione locale con `tracking_code = TBC-...`, owner = utente e un evento di tracking: compare subito in **Spedizioni effettuate** (admin) o **Le tue spedizioni** (rivenditore). Per queste righe il PDF etichetta locale è disabilitato: l'etichetta si scarica dal portale TravelBox.
 - `POST /api/travelbox/import-history` (admin) importa a blocchi lo storico TravelBox nell'elenco MUVPACK; salta annullate/rifiutate e spedizioni già presenti.
 - Storico 2026 importato in produzione: **102 spedizioni TravelBox** (oltre alle 2 spedizioni locali già presenti), visibili in **Spedizioni effettuate** con badge TravelBox.
+- `POST /api/travelbox/import-address-book` (admin) importa i destinatari TravelBox nella rubrica MUVPACK, saltando mittenti e duplicati. In produzione sono stati importati **90 destinatari** nella rubrica admin.
 - In caso di errore il destinatario temporaneo viene rimosso.
 - Il controllo sul credito residuo è stato **rimosso** su richiesta: MUVPACK non blocca più la creazione per credito.
 
