@@ -297,6 +297,16 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
                   {sender?.province ? ` ${sender.province}` : ""}
                 </span>
               </div>
+              <div className="grid grid-cols-[110px_1fr] gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="snd-cap">CAP</Label>
+                  <Input id="snd-cap" readOnly value={request.origin_cap} className="h-10 bg-muted font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="snd-city">Paese / Città</Label>
+                  <Input id="snd-city" readOnly value={request.origin_city ?? ""} className="h-10 bg-muted" placeholder="—" />
+                </div>
+              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="snd-name">Cognome e nome / Ragione sociale</Label>
                 <div className="relative">
@@ -332,6 +342,16 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dati destinatario</p>
             <span className="text-[11px] text-muted-foreground">CAP {request.dest_cap}{request.dest_city ? ` · ${request.dest_city}` : ""}</span>
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="rcp-cap">CAP</Label>
+              <Input id="rcp-cap" readOnly value={request.dest_cap} className="h-10 bg-muted font-mono" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rcp-city">Paese / Città</Label>
+              <Input id="rcp-city" readOnly value={request.dest_city ?? ""} className="h-10 bg-muted" placeholder="—" />
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="rcp-name">Nome e cognome / Ragione sociale</Label>
