@@ -59,6 +59,8 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
   const [pickupDate, setPickupDate] = useState(nextPickupDate);
   const [pickupSlot, setPickupSlot] = useState<"9-12" | "12-15" | "15-18" | "18-21">("9-12");
   const [tbResult, setTbResult] = useState<TravelBoxCheckoutResult | null>(null);
+  const [senderFocus, setSenderFocus] = useState(false);
+  const [recipientFocus, setRecipientFocus] = useState(false);
   const open = quote !== null;
   useEffect(() => {
     if (!open) setTbResult(null);
@@ -70,20 +72,49 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
     setPickupSlot("9-12");
   }, [open, quote?.source]);
   useEffect(() => {
-    if (!open || quote?.source !== "travelbox") return;
-    setSenderName(sender?.name ?? "");
-    setSenderAddress(sender?.street ?? "");
-    setSenderEmail(sender?.email ?? "");
-    setSenderPhone(sender?.phone ?? "");
-    setSenderContact(sender?.contact ?? sender?.name ?? "");
-  }, [open, quote?.source, sender?.name, sender?.street, sender?.email, sender?.phone, sender?.contact]);
+    if (!open) return;
+    if (quote?.source === "travelbox") {
+      setSenderName("");
+      setSenderAddress("");
+      setSenderEmail("");
+      setSenderPhone("");
+      setSenderContact("");
+    }
+    setName("");
+    setAddress("");
+    setEmail("");
+    setPhone("");
+    setContact("");
+    setSenderFocus(false);
+    setRecipientFocus(false);
+  }, [open, quote?.source]);
   const contacts = useContacts(open);
   // only recipients at the quoted destination CAP can be used (the price depends on it)
-  const book = (contacts.isError ? [] : contacts.data ?? []).filter((c) => c.cap === request.dest_cap);
+  const allContacts = contacts.isError ? [] : contacts.data ?? [];
+  const book = allContacts.filter((c) => c.cap === request.dest_cap);
+  const senderBook = allContacts.filter((c) => c.cap === request.origin_cap);
+  const senderQuery = senderName.trim().toLowerCase();
+  const senderMatches =
+    senderFocus && senderQuery.length >= 2
+      ? senderBook.filter((c) => c.name.toLowerCase().includes(senderQuery)).slice(0, 6)
+      : [];
+  const recipientQuery = name.trim().toLowerCase();
+  const recipientMatches =
+    recipientFocus && recipientQuery.length >= 2
+      ? book.filter((c) => c.name.toLowerCase().includes(recipientQuery)).slice(0, 6)
+      : [];
   const fill = (c: Contact) => {
     setName(c.name);
     setAddress(c.address);
     setEmail(c.email ?? "");
+    setRecipientFocus(false);
+  };
+  const fillSender = (c: Contact) => {
+    setSenderName(c.name);
+    setSenderAddress(c.address);
+    setSenderEmail(c.email ?? "");
+    setSenderContact(c.name);
+    setSenderFocus(false);
   };
   const prefilled = useRef<string | null>(null);
   useEffect(() => {
@@ -94,6 +125,9 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
       fill(c);
     }
   }, [open, prefillContactId, contacts.data]);
+  useEffect(() => {
+    if (!open) prefilled.current = null;
+  }, [open]);
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -265,7 +299,19 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="snd-name">Cognome e nome / Ragione sociale</Label>
-                <Input id="snd-name" required minLength={2} maxLength={35} data-testid="shipment-sender-name-input" value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="Alessio Rosselli" />
+                <div className="relative">
+                  <Input id="snd-name" required minLength={2} maxLength={35} data-testid="shipment-sender-name-input" value={senderName} onChange={(e) => setSenderName(e.target.value)} onFocus={() => setSenderFocus(true)} onBlur={() => setTimeout(() => setSenderFocus(false), 120)} placeholder="Alessio Rosselli" />
+                  {senderMatches.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-56 overflow-auto rounded-xl border bg-white shadow-lg">
+                      {senderMatches.map((c) => (
+                        <button key={c.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => fillSender(c)} className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted">
+                          <span className="font-medium text-navy">{c.name}</span>
+                          <span className="text-xs text-muted-foreground">{c.address} · {c.cap} {c.city}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="snd-addr">Indirizzo</Label>
@@ -289,7 +335,19 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="rcp-name">Nome e cognome / Ragione sociale</Label>
-            <Input id="rcp-name" data-testid="shipment-recipient-name-input" required minLength={2} maxLength={35} value={name} onChange={(e) => setName(e.target.value)} placeholder="Mario Rossi" />
+            <div className="relative">
+              <Input id="rcp-name" data-testid="shipment-recipient-name-input" required minLength={2} maxLength={35} value={name} onChange={(e) => setName(e.target.value)} onFocus={() => setRecipientFocus(true)} onBlur={() => setTimeout(() => setRecipientFocus(false), 120)} placeholder="Mario Rossi" />
+              {recipientMatches.length > 0 && (
+                <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-56 overflow-auto rounded-xl border bg-white shadow-lg">
+                  {recipientMatches.map((c) => (
+                    <button key={c.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => fill(c)} className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted">
+                      <span className="font-medium text-navy">{c.name}</span>
+                      <span className="text-xs text-muted-foreground">{c.address} · {c.cap} {c.city}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="rcp-addr">Indirizzo</Label>
