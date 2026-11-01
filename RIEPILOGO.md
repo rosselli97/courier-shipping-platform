@@ -115,6 +115,7 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - Il dialog di creazione dopo la scelta del corriere mostra i campi mittente/destinatario e i dettagli spedizione.
 - Aggiunto il campo **Colli** (1-100) nel form di nuova spedizione: entra nel peso volumetrico (`L×P×A×colli/5000`), nel preventivo TravelBox (`pieces`) e nel prezzo pallet (tariffa × colli).
 - Il CAP nel form interroga `GET /api/geo/comuni` e fa selezionare il comune; CAP + comune viaggiano nel preventivo (`origin_city`/`dest_city`) e vengono mostrati nel dialog di creazione spedizione.
+- Nel dialog di creazione mittente/destinatario partono vuoti; il nome è autocompletato dalla rubrica filtrata per CAP e selezionando il contatto si compilano nome, indirizzo, email (e contatto mittente). I CAP con i comuni scelti restano visibili nelle testate.
 
 ## 7. Account demo
 
