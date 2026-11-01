@@ -19,6 +19,8 @@ export default function Couriers() {
   const req: QuoteRequest = {
     origin_cap: params.get("o") ?? "",
     dest_cap: params.get("d") ?? "",
+    origin_city: params.get("oc") || null,
+    dest_city: params.get("dc") || null,
     weight_kg: Number(params.get("w") ?? 0),
     length_cm: Number(params.get("l") ?? 0),
     width_cm: Number(params.get("wi") ?? 0),
@@ -56,7 +58,7 @@ export default function Couriers() {
 
         <div data-testid="couriers-route-summary" className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border bg-card px-4 py-3 text-sm">
           <span className="font-semibold text-navy">
-            {quote.data?.origin_city ?? req.origin_cap} <span className="text-brand">→</span> {quote.data?.dest_city ?? req.dest_cap}
+            {req.origin_cap} {quote.data?.origin_city ?? req.origin_city} <span className="text-brand">→</span> {req.dest_cap} {quote.data?.dest_city ?? req.dest_city}
           </span>
           <span className="text-muted-foreground">{req.pieces} colli - {req.length_cm}×{req.width_cm}×{req.height_cm} cm</span>
           <span className="inline-flex items-center gap-1 text-muted-foreground">

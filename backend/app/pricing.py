@@ -167,8 +167,8 @@ def build_quote(db: Session, req: QuoteRequest, user: User | None) -> QuoteRespo
         pallet_zone=PALLET_ZONES[zone] if zone else None,
         billable_weight_kg=first.billable_weight,
         volumetric_weight_kg=first.volumetric_weight,
-        origin_city=city_for_cap(req.origin_cap),
-        dest_city=city_for_cap(req.dest_cap),
+        origin_city=req.origin_city or city_for_cap(req.origin_cap),
+        dest_city=req.dest_city or city_for_cap(req.dest_cap),
         quotes=quotes,
     )
 

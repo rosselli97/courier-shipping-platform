@@ -114,6 +114,7 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - La card **“Serve aiuto?”** è stata creata **solo per i clienti B2B/rivenditori**, sopra il profilo utente; l'admin non la mostra.
 - Il dialog di creazione dopo la scelta del corriere mostra i campi mittente/destinatario e i dettagli spedizione.
 - Aggiunto il campo **Colli** (1-100) nel form di nuova spedizione: entra nel peso volumetrico (`L×P×A×colli/5000`), nel preventivo TravelBox (`pieces`) e nel prezzo pallet (tariffa × colli).
+- Il CAP nel form interroga `GET /api/geo/comuni` e fa selezionare il comune; CAP + comune viaggiano nel preventivo (`origin_city`/`dest_city`) e vengono mostrati nel dialog di creazione spedizione.
 
 ## 7. Account demo
 

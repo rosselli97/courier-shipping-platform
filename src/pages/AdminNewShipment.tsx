@@ -9,7 +9,7 @@ import { apiPost } from "@/lib/api";
 import type { CourierQuote, QuoteRequest, QuoteResponse } from "@/lib/types";
 
 const toReq = (v: CalcValues): QuoteRequest => ({
-  origin_cap: v.o, dest_cap: v.d, weight_kg: Number(v.w), length_cm: Number(v.l), width_cm: Number(v.wi), height_cm: Number(v.h),
+  origin_cap: v.o, dest_cap: v.d, origin_city: v.oc || null, dest_city: v.dc || null, weight_kg: Number(v.w), length_cm: Number(v.l), width_cm: Number(v.wi), height_cm: Number(v.h),
   pieces: Number(v.n), is_pallet: v.p === "1", source: "travelbox",
 });
 

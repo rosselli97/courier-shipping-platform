@@ -15,7 +15,7 @@ from travelbox.api import app as travelbox_app
 from .config import CORS_ORIGIN_REGEX, CORS_ORIGINS, SESSION_COOKIE
 from .database import Base, SessionLocal, engine
 from .models import User
-from .routers import admin, auth, contacts, payments, quotes, reseller, tickets, tracking, travelbox_checkout
+from .routers import admin, auth, contacts, geo, payments, quotes, reseller, tickets, tracking, travelbox_checkout
 from .security import read_session_token
 from .seed import seed
 
@@ -53,6 +53,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api")
+app.include_router(geo.router, prefix="/api")
 app.include_router(quotes.router, prefix="/api")
 app.include_router(tracking.router, prefix="/api")
 app.include_router(contacts.router, prefix="/api")

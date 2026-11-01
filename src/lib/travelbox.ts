@@ -121,6 +121,8 @@ export interface TravelBoxLabelGroup {
 export interface TravelBoxCheckoutPayload {
   origin_cap: string;
   dest_cap: string;
+  origin_city?: string | null;
+  dest_city?: string | null;
   weight_kg: number;
   length_cm: number;
   width_cm: number;

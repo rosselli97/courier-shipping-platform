@@ -43,6 +43,8 @@ interface Props {
 
 export default function ShipmentDialog({ quote, request, onClose, role = "reseller", onCreated, prefillContactId, sender }: Props) {
   const isAdmin = role === "admin";
+  const originLabel = [request.origin_cap, request.origin_city].filter(Boolean).join(" ");
+  const destLabel = [request.dest_cap, request.dest_city].filter(Boolean).join(" ");
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
@@ -171,7 +173,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
             <CourierLogo courier={quote.courier} size="sm" />
             <div className="flex-1 text-sm">
               <p className="font-semibold text-navy">{quote.courier_name}</p>
-              <p className="text-muted-foreground">{request.origin_cap} → {request.dest_cap} · {request.pieces} colli - {request.weight_kg} kg</p>
+              <p className="text-muted-foreground">{originLabel} → {destLabel} · {request.pieces} colli - {request.weight_kg} kg</p>
             </div>
             <div className="text-right">
               <p className="font-heading text-lg font-bold text-navy">{eur(quote.price)}</p>
@@ -219,6 +221,8 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
               createTravelBox.mutate({
                 origin_cap: request.origin_cap,
                 dest_cap: request.dest_cap,
+                origin_city: request.origin_city ?? null,
+                dest_city: request.dest_city ?? null,
                 weight_kg: request.weight_kg,
                 length_cm: request.length_cm,
                 width_cm: request.width_cm,
@@ -254,8 +258,8 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dati mittente</p>
                 <span className="text-[11px] text-muted-foreground">
-                  CAP {sender?.postal_code ?? request.origin_cap}
-                  {sender?.city ? ` · ${sender.city}` : ""}
+                  CAP {request.origin_cap}
+                  {request.origin_city ? ` · ${request.origin_city}` : sender?.city ? ` · ${sender.city}` : ""}
                   {sender?.province ? ` ${sender.province}` : ""}
                 </span>
               </div>
@@ -281,7 +285,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
           )}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dati destinatario</p>
-            <span className="text-[11px] text-muted-foreground">CAP {request.dest_cap}</span>
+            <span className="text-[11px] text-muted-foreground">CAP {request.dest_cap}{request.dest_city ? ` · ${request.dest_city}` : ""}</span>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="rcp-name">Nome e cognome / Ragione sociale</Label>

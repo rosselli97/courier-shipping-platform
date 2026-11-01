@@ -323,6 +323,50 @@ class TravelBoxClient:
         """Spedizioni create ma non ancora pagate (`/ilmiocarrello`)."""
         return parsers.parse_cart(self._get_html("/ilmiocarrello"))
 
+    def comuni(self, cap: str, country_code: str = "IT") -> list[dict[str, Any]]:
+        """Comuni associati a un CAP, come li restituisce `/getcomuni`."""
+        response = self._request(
+            "POST",
+            "/getcomuni",
+            data={"cap": cap, "codstato": country_code},
+            headers={
+                "Referer": f"{self.settings.base_url.rstrip('/')}/nuovaspedizione",
+                "Origin": self.settings.base_url.rstrip("/"),
+                "Accept": "application/json, text/javascript, */*; q=0.01",
+            },
+        )
+        if response.status_code >= 400:
+            return []
+        try:
+            rows = response.json().get("data") or []
+        except (ValueError, AttributeError):
+            return []
+        if not isinstance(rows, list):
+            return []
+        out: list[dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            name = parsers.clean(str(row.get("nome") or ""))
+            if not name or name.isdigit():
+                continue
+            province = str(row.get("provincia") or "").strip().upper()
+            if len(province) != 2 or not province.isalpha() or province == "IT":
+                continue
+            key = (name.casefold(), province)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(
+                {
+                    "idcomune": str(row.get("idcomune") or "") or None,
+                    "nome": name,
+                    "provincia": province or None,
+                }
+            )
+        return out
+
     def resolve_comune(self, cap: str, city: str, country_code: str = "IT") -> dict[str, Any] | None:
         for payload in (
             {"cap": cap, "codstato": country_code},

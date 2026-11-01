@@ -45,6 +45,8 @@ class UserPublic(BaseModel):
 class QuoteRequest(BaseModel):
     origin_cap: str
     dest_cap: str
+    origin_city: str | None = None
+    dest_city: str | None = None
     weight_kg: float = Field(gt=0)
     length_cm: float = Field(gt=0)
     width_cm: float = Field(gt=0)
@@ -60,6 +62,12 @@ class QuoteRequest(BaseModel):
         if not CAP_RE.match(v):
             raise ValueError("CAP must be 5 digits")
         return v
+
+
+class ComuneOption(BaseModel):
+    idcomune: str | None = None
+    nome: str
+    provincia: str | None = None
 
 
 class CourierQuote(BaseModel):

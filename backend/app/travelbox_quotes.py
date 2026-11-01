@@ -268,10 +268,10 @@ def _build_draft(
         sender_phone=sender_phone or sender.get("phone") or sender.get("mobile") or None,
         sender_contact=sender_contact or sender.get("contact") or sender.get("name") or None,
         recipient_id=recipient_id,
-        sender_city=city_for_cap(req.origin_cap),
+        sender_city=req.origin_city or city_for_cap(req.origin_cap),
         sender_cap=req.origin_cap,
         sender_province=(sender.get("province") or "") if req.origin_cap == sender.get("cap") else "",
-        recipient_city=recipient_city or city_for_cap(req.dest_cap),
+        recipient_city=recipient_city or req.dest_city or city_for_cap(req.dest_cap),
         recipient_cap=req.dest_cap,
         recipient_province=recipient_province,
         recipient_name=recipient_name,
@@ -307,6 +307,8 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
     key = (
         req.origin_cap,
         req.dest_cap,
+        req.origin_city,
+        req.dest_city,
         round(req.weight_kg, 3),
         round(req.length_cm, 2),
         round(req.width_cm, 2),
@@ -363,8 +365,8 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
         pallet_zone=zone,
         billable_weight_kg=billable,
         volumetric_weight_kg=volumetric,
-        origin_city=city_for_cap(req.origin_cap),
-        dest_city=city_for_cap(req.dest_cap),
+        origin_city=req.origin_city or city_for_cap(req.origin_cap),
+        dest_city=req.dest_city or city_for_cap(req.dest_cap),
         quotes=quotes,
         provider="travelbox",
         notice=result.message or (None if quotes else "Nessuna offerta TravelBox per questa tratta"),
@@ -403,7 +405,7 @@ def preview_travelbox_booking(
     if sender is None:
         return None
 
-    city = city_for_cap(req.dest_cap)
+    city = req.dest_city or city_for_cap(req.dest_cap)
     province = ""
     client = get_client()
     with _client_lock:
@@ -466,7 +468,7 @@ def create_travelbox_shipment(
     if sender is None:
         return None
 
-    city = city_for_cap(req.dest_cap)
+    city = req.dest_city or city_for_cap(req.dest_cap)
     province = ""
     client = get_client()
     created_recipient = False

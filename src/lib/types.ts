@@ -15,6 +15,8 @@ export interface UserPublic {
 export interface QuoteRequest {
   origin_cap: string;
   dest_cap: string;
+  origin_city?: string | null;
+  dest_city?: string | null;
   weight_kg: number;
   length_cm: number;
   width_cm: number;
@@ -22,6 +24,12 @@ export interface QuoteRequest {
   pieces: number;
   is_pallet: boolean;
   source?: "auto" | "local" | "travelbox";
+}
+
+export interface ComuneOption {
+  idcomune: string | null;
+  nome: string;
+  provincia: string | null;
 }
 
 export interface CourierQuote {

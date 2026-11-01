@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowRight, BookUser, Boxes, Mail, Package, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { apiGet } from "@/lib/api";
 import { useMe } from "@/lib/auth";
 import { useContacts } from "@/lib/contacts";
+import type { ComuneOption } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const PRESETS = [
@@ -16,8 +18,8 @@ const PRESETS = [
   { id: "pallet", label: "Pallet", sub: "120×80 · 150 kg", icon: Boxes, w: "150", l: "120", wi: "80", h: "100", n: "1", p: "1" },
 ];
 
-/** n = number of parcels/colli, p = "1" for a pallet shipment, "0" for a parcel */
-export type CalcValues = Record<"o" | "d" | "w" | "l" | "wi" | "h" | "n" | "p", string>;
+/** oc/dc = selected town names, n = parcels/colli, p = "1" for a pallet shipment */
+export type CalcValues = Record<"o" | "d" | "oc" | "dc" | "w" | "l" | "wi" | "h" | "n" | "p", string>;
 
 export default function CalculatorForm({ onSubmit, initial }: {
   onSubmit: (v: CalcValues, contactId: string | null) => void;
@@ -27,16 +29,66 @@ export default function CalculatorForm({ onSubmit, initial }: {
   const contacts = useContacts(!!me.data);
   const book = contacts.isError ? [] : contacts.data ?? [];
   const [contactId, setContactId] = useState<string | null>(null);
-  const [form, setForm] = useState<CalcValues>(initial ?? { o: "20121", d: "00187", w: "3", l: "40", wi: "30", h: "20", n: "1", p: "0" });
+  const [form, setForm] = useState<CalcValues>(initial ?? { o: "20121", d: "00187", oc: "", dc: "", w: "3", l: "40", wi: "30", h: "20", n: "1", p: "0" });
   const [preset, setPreset] = useState(initial ? "" : "standard");
+  const [options, setOptions] = useState<Record<"o" | "d", ComuneOption[]>>({ o: [], d: [] });
+  const [openField, setOpenField] = useState<"o" | "d" | null>(null);
+  const [loadingField, setLoadingField] = useState<"o" | "d" | null>(null);
   const set = (k: keyof CalcValues) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [k]: e.target.value });
-    if (k === "d") setContactId(null);
+    const value = e.target.value;
+    if (k === "o") {
+      setForm({ ...form, o: value, oc: "" });
+      setOptions((prev) => ({ ...prev, o: [] }));
+      setOpenField("o");
+    } else if (k === "d") {
+      setForm({ ...form, d: value, dc: "" });
+      setOptions((prev) => ({ ...prev, d: [] }));
+      setOpenField("d");
+      setContactId(null);
+    } else {
+      setForm({ ...form, [k]: value });
+    }
     setPreset("");
   };
   const capOk = (v: string) => /^\d{5}$/.test(v);
   const piecesOk = (v: string) => Number.isInteger(Number(v)) && Number(v) >= 1;
-  const valid = capOk(form.o) && capOk(form.d) && piecesOk(form.n) && [form.w, form.l, form.wi, form.h].every((v) => Number(v) > 0);
+  const valid =
+    capOk(form.o) &&
+    capOk(form.d) &&
+    form.oc.trim().length > 0 &&
+    form.dc.trim().length > 0 &&
+    piecesOk(form.n) &&
+    [form.w, form.l, form.wi, form.h].every((v) => Number(v) > 0);
+
+  useEffect(() => {
+    const pending: ReturnType<typeof setTimeout>[] = [];
+    const load = (field: "o" | "d", cap: string) => {
+      if (!capOk(cap)) return;
+      const selected = field === "o" ? form.oc : form.dc;
+      if (selected.trim()) return;
+      const timer = setTimeout(async () => {
+        setLoadingField(field);
+        try {
+          const found = await apiGet<ComuneOption[]>(`/geo/comuni?cap=${cap}`);
+          setOptions((prev) => ({ ...prev, [field]: found }));
+        } catch {
+          setOptions((prev) => ({ ...prev, [field]: [] }));
+        } finally {
+          setLoadingField(null);
+        }
+      }, 300);
+      pending.push(timer);
+    };
+    load("o", form.o);
+    load("d", form.d);
+    return () => pending.forEach(clearTimeout);
+  }, [form.o, form.d, form.oc, form.dc]);
+
+  const selectComune = (field: "o" | "d", option: ComuneOption) => {
+    setForm((prev) => (field === "o" ? { ...prev, oc: option.nome } : { ...prev, dc: option.nome }));
+    setOpenField(null);
+    setPreset("");
+  };
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (valid) onSubmit(form, contactId);
@@ -87,7 +139,7 @@ export default function CalculatorForm({ onSubmit, initial }: {
               const c = book.find((x) => x.id === v);
               if (!c) return;
               setContactId(c.id);
-              setForm((f) => ({ ...f, d: c.cap }));
+              setForm((f) => ({ ...f, d: c.cap, dc: c.city }));
             }}
           >
             <SelectTrigger data-testid="calc-contact-select" className="h-12 w-full">
@@ -115,11 +167,49 @@ export default function CalculatorForm({ onSubmit, initial }: {
       <div className="mt-5 grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="o">CAP partenza</Label>
-          <Input id="o" inputMode="numeric" maxLength={5} data-testid="calc-origin-cap-input" value={form.o} onChange={set("o")} className="h-12 font-mono text-base" placeholder="20121" />
+          <div className="relative">
+            <Input id="o" inputMode="numeric" maxLength={5} data-testid="calc-origin-cap-input" value={form.o} onChange={set("o")} onFocus={() => setOpenField("o")} className="h-12 font-mono text-base" placeholder="20121" />
+            {openField === "o" && capOk(form.o) && (options.o.length > 0 || loadingField === "o") && (
+              <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-52 overflow-auto rounded-xl border bg-white shadow-lg">
+                {loadingField === "o" ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">Ricerca comune...</p>
+                ) : options.o.map((c) => (
+                  <button key={`${c.idcomune ?? c.nome}-${c.provincia ?? ""}`} type="button" onClick={() => selectComune("o", c)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted">
+                    <span className="font-medium text-navy">{c.nome}</span>
+                    {c.provincia && <span className="text-xs text-muted-foreground">{c.provincia}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {form.oc ? (
+            <p className="text-xs font-medium text-emerald-700">Comune: {form.oc}</p>
+          ) : capOk(form.o) ? (
+            <p className="text-xs text-muted-foreground">{loadingField === "o" ? "Ricerca comune..." : "Seleziona il comune"}</p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="d">CAP destinazione</Label>
-          <Input id="d" inputMode="numeric" maxLength={5} data-testid="calc-dest-cap-input" value={form.d} onChange={set("d")} className="h-12 font-mono text-base" placeholder="00187" />
+          <div className="relative">
+            <Input id="d" inputMode="numeric" maxLength={5} data-testid="calc-dest-cap-input" value={form.d} onChange={set("d")} onFocus={() => setOpenField("d")} className="h-12 font-mono text-base" placeholder="00187" />
+            {openField === "d" && capOk(form.d) && (options.d.length > 0 || loadingField === "d") && (
+              <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-52 overflow-auto rounded-xl border bg-white shadow-lg">
+                {loadingField === "d" ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">Ricerca comune...</p>
+                ) : options.d.map((c) => (
+                  <button key={`${c.idcomune ?? c.nome}-${c.provincia ?? ""}`} type="button" onClick={() => selectComune("d", c)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted">
+                    <span className="font-medium text-navy">{c.nome}</span>
+                    {c.provincia && <span className="text-xs text-muted-foreground">{c.provincia}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {form.dc ? (
+            <p className="text-xs font-medium text-emerald-700">Comune: {form.dc}</p>
+          ) : capOk(form.d) ? (
+            <p className="text-xs text-muted-foreground">{loadingField === "d" ? "Ricerca comune..." : "Seleziona il comune"}</p>
+          ) : null}
         </div>
       </div>
 
@@ -160,7 +250,7 @@ export default function CalculatorForm({ onSubmit, initial }: {
 
       {!valid && (
         <p data-testid="calc-validation-error" className="mt-3 text-sm text-destructive">
-          Inserisci CAP validi (5 cifre), colli, peso e dimensioni.
+          Inserisci CAP validi (5 cifre), seleziona i comuni, colli, peso e dimensioni.
         </p>
       )}
 
