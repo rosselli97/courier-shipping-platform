@@ -272,6 +272,7 @@ class ContactInput(BaseModel):
     name: str = Field(min_length=2)
     address: str = Field(min_length=4)
     cap: str
+    city: str | None = None
     email: str | None = None
 
     @field_validator("cap")

@@ -245,6 +245,7 @@ export interface ContactInput {
   name: string;
   address: string;
   cap: string;
+  city?: string | null;
   email: string | null;
 }
 

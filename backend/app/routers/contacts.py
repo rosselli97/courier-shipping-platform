@@ -40,7 +40,7 @@ def create_contact(body: ContactInput, user: User = Depends(get_current_user), d
         name=body.name.strip(),
         address=body.address.strip(),
         cap=body.cap,
-        city=city_for_cap(body.cap),
+        city=(body.city or "").strip() or city_for_cap(body.cap),
         email=body.email,
         uses=0,
         last_used_at=datetime.now(timezone.utc),
@@ -57,7 +57,7 @@ def update_contact(contact_id: str, body: ContactInput, user: User = Depends(get
     contact.name = body.name.strip()
     contact.address = body.address.strip()
     contact.cap = body.cap
-    contact.city = city_for_cap(body.cap)
+    contact.city = (body.city or "").strip() or city_for_cap(body.cap)
     contact.email = body.email
     db.commit()
     db.refresh(contact)
