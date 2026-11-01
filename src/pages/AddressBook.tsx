@@ -64,7 +64,7 @@ function ContactForm({ initial, onDone }: { initial: Contact | null; onDone: () 
       {f.cap && !capOk && <p data-testid="contact-cap-error" className="text-xs text-destructive">Il CAP deve avere 5 cifre.</p>}
       <DialogFooter>
         <Button type="submit" data-testid="contact-save-button" disabled={!valid || save.isPending} className="h-11 w-full bg-brand text-white hover:bg-brand-hover">
-          {initial ? "Salva modifiche" : "Aggiungi destinatario"}
+          {initial ? "Salva modifiche" : "Aggiungi contatto"}
         </Button>
       </DialogFooter>
     </form>
@@ -97,28 +97,28 @@ export default function AddressBook({ role }: { role: "admin" | "reseller" }) {
   return (
     <DashboardShell
       role={role}
-      title="Rubrica destinatari"
-      subtitle="I destinatari si salvano da soli a ogni spedizione. Qui puoi aggiungerli, modificarli o eliminarli."
+      title="Rubrica"
+      subtitle="Contatti mittenti e destinatari sincronizzati da TravelBox. Puoi aggiungerli, modificarli o eliminarli."
       actions={
         <Button data-testid="contact-add-button" onClick={() => setEditing("new")} className="h-11 bg-brand px-5 font-semibold text-white hover:bg-brand-hover">
-          <Plus className="size-4" /> Nuovo destinatario
+          <Plus className="size-4" /> Nuovo contatto
         </Button>
       }
     >
       <section className="rounded-2xl border bg-card shadow-sm">
         <div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="flex items-center gap-2 font-heading text-lg font-semibold text-navy">
-            <BookUser className="size-5 text-brand" /> {list.length} destinatari
+            <BookUser className="size-5 text-brand" /> {list.length} contatti
           </h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input data-testid="contact-search-input" aria-label="Cerca destinatario" placeholder="Nome, indirizzo, città, CAP" value={search} onChange={(e) => setSearch(e.target.value)} className="h-10 pl-9 sm:w-72" />
+            <Input data-testid="contact-search-input" aria-label="Cerca contatto" placeholder="Nome, indirizzo, città, CAP" value={search} onChange={(e) => setSearch(e.target.value)} className="h-10 pl-9 sm:w-72" />
           </div>
         </div>
         <Table data-testid="contacts-table">
           <TableHeader>
             <TableRow>
-              <TableHead className="pl-5">Destinatario</TableHead>
+              <TableHead className="pl-5">Contatto</TableHead>
               <TableHead>Indirizzo</TableHead>
               <TableHead>CAP / Città</TableHead>
               <TableHead>Email</TableHead>
@@ -133,7 +133,7 @@ export default function AddressBook({ role }: { role: "admin" | "reseller" }) {
             )}
             {!contacts.isPending && rows.length === 0 && (
               <TableRow><TableCell colSpan={7} data-testid="contacts-empty" className="py-10 text-center text-muted-foreground">
-                {list.length ? "Nessun destinatario corrisponde alla ricerca." : "La rubrica è vuota: aggiungi un destinatario o crea una spedizione."}
+                {list.length ? "Nessun contatto corrisponde alla ricerca." : "La rubrica è vuota: aggiungi un contatto o crea una spedizione."}
               </TableCell></TableRow>
             )}
             {rows.map((c) => (
@@ -165,7 +165,7 @@ export default function AddressBook({ role }: { role: "admin" | "reseller" }) {
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent data-testid="contact-dialog" className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-heading text-navy">{editing === "new" ? "Nuovo destinatario" : "Modifica destinatario"}</DialogTitle>
+            <DialogTitle className="font-heading text-navy">{editing === "new" ? "Nuovo contatto" : "Modifica contatto"}</DialogTitle>
             <DialogDescription>Il CAP determina la tariffa: verrà proposto solo per spedizioni verso quel CAP.</DialogDescription>
           </DialogHeader>
           {editing !== null && (
@@ -177,7 +177,7 @@ export default function AddressBook({ role }: { role: "admin" | "reseller" }) {
       <Dialog open={deleting !== null} onOpenChange={(o) => !o && setDeleting(null)}>
         <DialogContent data-testid="contact-delete-dialog" className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-heading text-navy">Eliminare il destinatario?</DialogTitle>
+            <DialogTitle className="font-heading text-navy">Eliminare il contatto?</DialogTitle>
             <DialogDescription>
               {deleting?.name} verrà rimosso dalla rubrica. Le spedizioni già create non cambiano.
             </DialogDescription>
