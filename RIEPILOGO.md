@@ -93,6 +93,7 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - `DELETE /api/admin/shipments/{id}` e `DELETE /api/reseller/shipments/{id}` per le spedizioni TravelBox in stato `creata`: rimuovono la spedizione dal carrello TravelBox e dal database MUVPACK.
 - Quando la spedizione viene pagata/trasmessa su TravelBox, il sync salva il token etichetta e il pulsante PDF scarica la **lettera di vettura reale** da TravelBox.
 - Aggiunta la colonna `shipments.label_token` con migrazione automatica all'avvio (Postgres/SQLite).
+- Sync produzione eseguito: 104 spedizioni TBC locali, 3 eliminate perché rimosse dal carrello, 101 con etichetta TravelBox scaricabile.
 
 ### Cosa vuole TravelBox per creare la spedizione
 
