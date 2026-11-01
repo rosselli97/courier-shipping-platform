@@ -86,6 +86,14 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - In caso di errore il destinatario temporaneo viene rimosso.
 - Il controllo sul credito residuo è stato **rimosso** su richiesta: MUVPACK non blocca più la creazione per credito.
 
+### Sincronizzazione TravelBox ↔ MUVPACK
+
+- `POST /api/travelbox/sync` (admin) allinea stato e etichette; le liste spedizioni lo eseguono automaticamente con TTL di 2 minuti.
+- Se una spedizione viene rimossa dal carrello TravelBox (stato `ANNULLATA`), il sync elimina anche il record locale: sparisce da MUVPACK.
+- `DELETE /api/admin/shipments/{id}` e `DELETE /api/reseller/shipments/{id}` per le spedizioni TravelBox in stato `creata`: rimuovono la spedizione dal carrello TravelBox e dal database MUVPACK.
+- Quando la spedizione viene pagata/trasmessa su TravelBox, il sync salva il token etichetta e il pulsante PDF scarica la **lettera di vettura reale** da TravelBox.
+- Aggiunta la colonna `shipments.label_token` con migrazione automatica all'avvio (Postgres/SQLite).
+
 ### Cosa vuole TravelBox per creare la spedizione
 
 - **Mittente**: `mittente[id]` **numerico** della rubrica, più `cognomenome`, `indirizzo`, `email` (obbligatoria), `telefono` (min. 8 cifre), `contatto`; `codice_fiscale`/`partita_iva` opzionali.

@@ -140,6 +140,7 @@ class ResellerShipment(BaseModel):
     email_status: EmailStatus
     is_pallet: bool
     source: Literal["local", "travelbox"] = "local"
+    label_available: bool = True
 
 
 class TrackingEventOut(BaseModel):

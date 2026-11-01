@@ -65,6 +65,7 @@ class Shipment(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     tracking_code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    label_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
     owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     is_admin_shipment: Mapped[bool] = mapped_column(Boolean, default=False)
     courier: Mapped[str] = mapped_column(String(16))

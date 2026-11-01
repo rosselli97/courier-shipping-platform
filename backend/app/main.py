@@ -22,10 +22,24 @@ from .seed import seed
 logger = logging.getLogger("muvpack")
 
 
+def apply_migrations() -> None:
+    """Aggiunge colonne nuove ai database gia' esistenti (Render Postgres)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "shipments" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("shipments")}
+    if "label_token" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE shipments ADD COLUMN label_token VARCHAR(255)"))
+
+
 def init_database(attempts: int = 30) -> None:
     for attempt in range(1, attempts + 1):
         try:
             Base.metadata.create_all(bind=engine)
+            apply_migrations()
             seed()
             return
         except Exception:

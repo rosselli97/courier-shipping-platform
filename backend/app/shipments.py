@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+import logging
+import threading
+import time
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import func, select
@@ -15,6 +18,8 @@ from .pricing import COURIERS, billable_weight, quote_for_courier
 from .schemas import ShipmentCreate, TravelBoxCheckoutRequest
 
 TRAVELBOX_PREFIX = "TBC-"
+
+logger = logging.getLogger("muvpack.travelbox.sync")
 
 STAGES = [
     (timedelta(hours=0), "creata", "Spedizione creata", "origin"),
@@ -143,6 +148,130 @@ def create_shipment(db: Session, user: User, body: ShipmentCreate, as_admin: boo
 
 def is_travelbox_shipment(shipment: Shipment) -> bool:
     return shipment.tracking_code.upper().startswith(TRAVELBOX_PREFIX)
+
+
+_sync_lock = threading.Lock()
+_last_sync = 0.0
+SYNC_TTL = 120
+
+
+def remove_travelbox_cart_item(reference: str) -> bool:
+    from travelbox.api import get_client
+
+    from .travelbox_quotes import client_lock
+
+    with client_lock:
+        return get_client().remove_from_cart(reference)
+
+
+def sync_travelbox_shipments(db: Session, *, force: bool = False) -> dict:
+    """Allinea le spedizioni TravelBox locali con lo stato del portale.
+
+    - elimina le locali rimosse dal carrello (stato ANNULLATA)
+    - aggiorna lo stato (pagata/trasmessa/consegnata...)
+    - salva il token etichetta quando il portale lo espone
+    """
+    global _last_sync
+    now = time.monotonic()
+    with _sync_lock:
+        if not force and now - _last_sync < SYNC_TTL:
+            return {"skipped": True}
+
+    local = list(db.scalars(select(Shipment).where(Shipment.tracking_code.like("TBC-%"))))
+    if not local:
+        _last_sync = now
+        return {"local": 0, "deleted": 0, "updated": 0, "labels": 0}
+
+    dates = [ensure_utc(shipment.created_at).date() for shipment in local]
+    start = (min(dates) - timedelta(days=1)).isoformat()
+    end = (date.today() + timedelta(days=1)).isoformat()
+
+    from travelbox.api import get_client
+
+    from .travelbox_quotes import client_lock
+
+    remote_map = {}
+    try:
+        page = 1
+        while page <= 20:
+            before = len(remote_map)
+            with client_lock:
+                rows = get_client().shipments(page=page, data_dal=start, data_al=end)
+            if not rows:
+                break
+            for row in rows:
+                if row.reference:
+                    remote_map[row.reference.strip().upper()] = row
+            if len(remote_map) == before:
+                break
+            page += 1
+    except Exception:
+        logger.exception("TravelBox sync: elenco non disponibile")
+        return {"error": True}
+
+    deleted = 0
+    updated = 0
+    labels = 0
+    for shipment in local:
+        remote = remote_map.get(shipment.tracking_code.upper())
+        if remote is None:
+            continue
+        status = (remote.status or "").upper()
+        if "ANNULL" in status:
+            db.delete(shipment)
+            deleted += 1
+            continue
+        new_status = _travelbox_status(remote.status)
+        if shipment.status != new_status:
+            shipment.status = new_status
+            updated += 1
+        if remote.label_token and shipment.label_token != remote.label_token:
+            shipment.label_token = remote.label_token
+            labels += 1
+
+    db.commit()
+    _last_sync = time.monotonic()
+    return {"local": len(local), "deleted": deleted, "updated": updated, "labels": labels}
+
+
+def travelbox_label(db: Session, shipment: Shipment) -> tuple[bytes, str, str]:
+    """Etichetta PDF reale da TravelBox, con token salvato o letto dal dettaglio."""
+    from travelbox.api import get_client
+    from travelbox.client import NotFound, UpstreamError
+
+    from .travelbox_quotes import client_lock
+
+    token = shipment.label_token
+    if not token:
+        try:
+            with client_lock:
+                detail = get_client().shipment_detail(shipment.tracking_code)
+        except NotFound as exc:
+            raise HTTPException(status_code=404, detail="Spedizione TravelBox non trovata") from exc
+        except UpstreamError as exc:
+            raise HTTPException(status_code=502, detail="Errore dal portale TravelBox") from exc
+        token = detail.label_token
+        if token:
+            shipment.label_token = token
+            db.commit()
+
+    if not token:
+        raise HTTPException(
+            status_code=409,
+            detail="Etichetta non ancora disponibile: completa il pagamento su TravelBox",
+        )
+
+    try:
+        with client_lock:
+            label = get_client().download_label(token)
+    except UpstreamError as exc:
+        raise HTTPException(status_code=502, detail="Impossibile scaricare l'etichetta da TravelBox") from exc
+
+    return (
+        label.content,
+        label.content_type or "application/pdf",
+        label.filename or f"etichetta-{shipment.tracking_code}.pdf",
+    )
 
 
 def _money_amount(money) -> float:

@@ -17,6 +17,7 @@ from ..schemas import TravelBoxCheckoutRequest, TravelBoxCheckoutResponse
 from ..shipments import (
     record_travelbox_history,
     record_travelbox_shipment,
+    sync_travelbox_shipments,
     travelbox_status_importable,
 )
 from ..travelbox_quotes import client_lock, create_travelbox_shipment, preview_travelbox_booking
@@ -132,6 +133,14 @@ def checkout(
         shipment_id=shipment.id if shipment else None,
         label_token=shipment.label_token if shipment else None,
     )
+
+
+@router.post("/travelbox/sync")
+def sync(user: User = Depends(get_active_user), db: Session = Depends(get_db)):
+    """Forza l'allineamento di stato/etichette con il portale TravelBox."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Accesso riservato all'amministrazione")
+    return sync_travelbox_shipments(db, force=True)
 
 
 @router.post("/travelbox/import-history")

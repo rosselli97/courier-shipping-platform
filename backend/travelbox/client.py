@@ -323,6 +323,22 @@ class TravelBoxClient:
         """Spedizioni create ma non ancora pagate (`/ilmiocarrello`)."""
         return parsers.parse_cart(self._get_html("/ilmiocarrello"))
 
+    def remove_from_cart(self, shipment_id: str | int) -> bool:
+        """Rimuove una spedizione dal carrello (`/rimuovispedizionecarrello`)."""
+        value = str(shipment_id).strip().upper()
+        if value.startswith("TBC-"):
+            value = value[4:]
+        numeric = parsers.numeric_id(value) or value
+        response = self._request(
+            "POST", "/rimuovispedizionecarrello", data={"idspedizione": numeric}
+        )
+        if response.status_code >= 400:
+            raise UpstreamError(response.status_code, response.text, "/rimuovispedizionecarrello")
+        try:
+            return bool(response.json().get("success"))
+        except (ValueError, AttributeError):
+            return False
+
     def comuni(self, cap: str, country_code: str = "IT") -> list[dict[str, Any]]:
         """Comuni associati a un CAP, come li restituisce `/getcomuni`."""
         response = self._request(

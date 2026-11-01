@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -38,9 +39,17 @@ from ..schemas import (
 )
 from ..security import hash_password
 from ..serializers import client_row, shipment_out
-from ..shipments import advance_tracking, create_shipment, is_travelbox_shipment
+from ..shipments import (
+    advance_tracking,
+    create_shipment,
+    is_travelbox_shipment,
+    remove_travelbox_cart_item,
+    sync_travelbox_shipments,
+    travelbox_label,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+logger = logging.getLogger("muvpack.admin")
 
 COURIER_ORDER = ["poste", "brt", "dhl"]
 
@@ -297,6 +306,10 @@ def _admin_shipment(db: Session, shipment_id: str) -> Shipment:
 
 @router.get("/shipments", response_model=list[ResellerShipment])
 def admin_shipments(_: User = Depends(require_admin), db: Session = Depends(get_db)):
+    try:
+        sync_travelbox_shipments(db)
+    except Exception:
+        logger.exception("TravelBox sync non riuscito")
     rows = list(
         db.scalars(
             select(Shipment)
@@ -315,11 +328,40 @@ def create_admin_shipment(body: ShipmentCreate, user: User = Depends(require_adm
     return shipment_out(shipment)
 
 
+@router.delete("/shipments/{shipment_id}")
+def delete_admin_shipment(
+    shipment_id: str, _: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    shipment = _admin_shipment(db, shipment_id)
+    if not is_travelbox_shipment(shipment):
+        raise HTTPException(
+            status_code=409, detail="Solo le spedizioni TravelBox possono essere eliminate"
+        )
+    if shipment.status != "creata":
+        raise HTTPException(status_code=409, detail="Spedizione già confermata su TravelBox")
+    try:
+        removed = remove_travelbox_cart_item(shipment.tracking_code)
+    except Exception:
+        logger.exception("TravelBox: rimozione dal carrello non riuscita")
+        raise HTTPException(
+            status_code=502,
+            detail="Impossibile rimuovere la spedizione dal carrello TravelBox",
+        )
+    db.delete(shipment)
+    db.commit()
+    return {"ok": True, "removed_from_travelbox": removed}
+
+
 @router.get("/shipments/{shipment_id}/label")
 def admin_label(shipment_id: str, _: User = Depends(require_admin), db: Session = Depends(get_db)):
     shipment = _admin_shipment(db, shipment_id)
     if is_travelbox_shipment(shipment):
-        raise HTTPException(status_code=409, detail="Etichetta disponibile sul portale TravelBox")
+        content, media_type, filename = travelbox_label(db, shipment)
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
     return Response(
         content=labels_pdf([shipment]),
         media_type="application/pdf",

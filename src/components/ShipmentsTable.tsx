@@ -1,16 +1,17 @@
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "motion/react";
-import { Download, Loader2, Mail, MailWarning, Search, X } from "lucide-react";
+import { Download, Loader2, Mail, MailWarning, Search, Trash2, X } from "lucide-react";
 import { CourierLogo, StatusBadge } from "@/components/brand";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { API_BASE } from "@/lib/api";
-import { dateIt, eur, STATUS_LABEL } from "@/lib/format";
+import { API_BASE, apiDelete } from "@/lib/api";
+import { dateIt, eur, errorMessage, STATUS_LABEL } from "@/lib/format";
 import type { ResellerShipment, ShipmentStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function ShipmentsTable({ title, data, isPending, labelBase, tid, priceLabel = "Prezzo" }: Props) {
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -57,6 +59,16 @@ export default function ShipmentsTable({ title, data, isPending, labelBase, tid,
       else next.add(id);
       return next;
     });
+  const deleteShipment = async (r: ResellerShipment) => {
+    if (!window.confirm(`Eliminare ${r.tracking_code}? Verrà rimossa anche dal carrello TravelBox.`)) return;
+    try {
+      await apiDelete<{ ok: boolean }>(`${labelBase}/shipments/${r.id}`);
+      qc.invalidateQueries({ queryKey: [tid] });
+      toast.success(`Spedizione ${r.tracking_code} eliminata`);
+    } catch (e) {
+      toast.error(errorMessage(e, "Eliminazione non riuscita"));
+    }
+  };
   const bulkHref = `${API_BASE}${labelBase}/labels?ids=${[...selected].slice(0, 100).join(",")}`;
 
   return (
@@ -163,19 +175,33 @@ export default function ShipmentsTable({ title, data, isPending, labelBase, tid,
               <TableCell><StatusBadge status={r.status as ShipmentStatus} /></TableCell>
               <TableCell className="text-right font-semibold text-navy">{eur(r.price)}</TableCell>
               <TableCell className="pr-5 text-right">
-                {r.source === "travelbox" ? (
-                  <span data-testid={`${tid}-travelbox-label-hint`} className="text-xs text-muted-foreground">Su TravelBox</span>
-                ) : (
-                  <a
-                    href={`${API_BASE}${labelBase}/shipments/${r.id}/label`}
-                    download={`etichetta-${r.tracking_code}.pdf`}
-                    data-testid={`${tid}-download-pdf-label-button`}
-                    onClick={() => toast.success("Download etichetta PDF avviato")}
-                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5 hover:border-brand hover:text-brand")}
-                  >
-                    <Download className="size-3.5" /> PDF
-                  </a>
-                )}
+                <div className="flex items-center justify-end gap-1.5">
+                  {r.source === "travelbox" && r.label_available === false ? (
+                    <span data-testid={`${tid}-travelbox-label-hint`} className="text-xs text-muted-foreground">Su TravelBox</span>
+                  ) : (
+                    <a
+                      href={`${API_BASE}${labelBase}/shipments/${r.id}/label`}
+                      download={`etichetta-${r.tracking_code}.pdf`}
+                      data-testid={`${tid}-download-pdf-label-button`}
+                      onClick={() => toast.success("Download etichetta PDF avviato")}
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5 hover:border-brand hover:text-brand")}
+                    >
+                      <Download className="size-3.5" /> PDF
+                    </a>
+                  )}
+                  {r.source === "travelbox" && r.status === "creata" && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      data-testid={`${tid}-delete-travelbox-shipment-button`}
+                      aria-label={`Elimina ${r.tracking_code}`}
+                      onClick={() => deleteShipment(r)}
+                      className="hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
