@@ -101,7 +101,10 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
   const recipientQuery = name.trim().toLowerCase();
   const recipientMatches =
     recipientFocus && recipientQuery.length >= 2
-      ? book.filter((c) => c.name.toLowerCase().includes(recipientQuery)).slice(0, 6)
+      ? allContacts
+          .filter((c) => c.name.toLowerCase().includes(recipientQuery))
+          .sort((a, b) => Number(b.cap === request.dest_cap) - Number(a.cap === request.dest_cap))
+          .slice(0, 8)
       : [];
   const fill = (c: Contact) => {
     setName(c.name);
@@ -362,7 +365,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
                   {recipientMatches.map((c) => (
                     <button key={c.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => fill(c)} className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted">
                       <span className="font-medium text-navy">{c.name}</span>
-                      <span className="text-xs text-muted-foreground">{c.address} · {c.cap} {c.city}</span>
+                      <span className="text-xs text-muted-foreground">{c.address} · {c.cap} {c.city}{c.cap !== request.dest_cap ? " · CAP diverso" : ""}</span>
                     </button>
                   ))}
                 </div>
