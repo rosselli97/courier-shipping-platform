@@ -22,6 +22,7 @@ from ..pricing import (
 from ..schemas import (
     AdminKpis,
     AdminMonth,
+    AdminScopeKpis,
     ClientCreate,
     ClientMarkup,
     ClientMarkupBody,
@@ -58,33 +59,7 @@ def _month_key(value: datetime) -> str:
     return value.strftime("%Y-%m")
 
 
-def _all_shipments(db: Session) -> list[Shipment]:
-    return list(db.scalars(select(Shipment).where(Shipment.is_admin_shipment.is_(False))))
-
-
-def _client_row(db: Session, user: User) -> ClientRow:
-    shipments = list(
-        db.scalars(
-            select(Shipment).where(
-                Shipment.owner_id == user.id, Shipment.is_admin_shipment.is_(False)
-            )
-        )
-    )
-    overrides = db.scalar(
-        select(MarkupRule.id).where(MarkupRule.client_id == user.id).limit(1)
-    )
-    custom = len(client_overrides(db, user.id)) if overrides else 0
-    return client_row(
-        user,
-        shipments=len(shipments),
-        revenue=sum(s.price for s in shipments),
-        custom_markups=custom,
-    )
-
-
-@router.get("/kpis", response_model=AdminKpis)
-def kpis(_: User = Depends(require_admin), db: Session = Depends(get_db)):
-    shipments = _all_shipments(db)
+def _scope_kpis(shipments: list[Shipment]) -> AdminScopeKpis:
     revenue = sum(s.price for s in shipments)
     costs = sum(s.base_cost + s.fuel_surcharge for s in shipments)
     profit = revenue - costs
@@ -115,22 +90,49 @@ def kpis(_: User = Depends(require_admin), db: Session = Depends(get_db)):
         for courier in COURIER_ORDER
     ]
 
-    active_clients = db.scalar(
-        select(User.id).where(User.role == "reseller", User.status == "active").limit(1)
+    return AdminScopeKpis(
+        revenue=round(revenue, 2),
+        costs=round(costs, 2),
+        profit=round(profit, 2),
+        margin_pct=round(profit / revenue * 100, 1) if revenue else 0.0,
+        shipments=len(shipments),
+        monthly=monthly,
+        by_courier=by_courier,
     )
+
+
+def _client_row(db: Session, user: User) -> ClientRow:
+    shipments = list(
+        db.scalars(
+            select(Shipment).where(
+                Shipment.owner_id == user.id, Shipment.is_admin_shipment.is_(False)
+            )
+        )
+    )
+    overrides = db.scalar(
+        select(MarkupRule.id).where(MarkupRule.client_id == user.id).limit(1)
+    )
+    custom = len(client_overrides(db, user.id)) if overrides else 0
+    return client_row(
+        user,
+        shipments=len(shipments),
+        revenue=sum(s.price for s in shipments),
+        custom_markups=custom,
+    )
+
+
+@router.get("/kpis", response_model=AdminKpis)
+def kpis(_: User = Depends(require_admin), db: Session = Depends(get_db)):
+    shipments = list(db.scalars(select(Shipment)))
+    admin_shipments = [s for s in shipments if s.is_admin_shipment]
+    client_shipments = [s for s in shipments if not s.is_admin_shipment]
     active_clients_count = len(
         list(db.scalars(select(User.id).where(User.role == "reseller", User.status == "active")))
     )
-
     return AdminKpis(
-        total_revenue=round(revenue, 2),
-        courier_costs=round(costs, 2),
-        net_profit=round(profit, 2),
-        net_margin_pct=round(profit / revenue * 100, 1) if revenue else 0.0,
-        total_shipments=len(shipments),
         active_clients=active_clients_count,
-        monthly=monthly,
-        by_courier=by_courier,
+        admin=_scope_kpis(admin_shipments),
+        clients=_scope_kpis(client_shipments),
     )
 
 

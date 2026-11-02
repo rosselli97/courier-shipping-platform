@@ -225,15 +225,20 @@ export interface CourierSplit {
   revenue: number;
 }
 
-export interface AdminKpis {
-  total_revenue: number;
-  courier_costs: number;
-  net_profit: number;
-  net_margin_pct: number;
-  total_shipments: number;
-  active_clients: number;
+export interface AdminScopeKpis {
+  revenue: number;
+  costs: number;
+  profit: number;
+  margin_pct: number;
+  shipments: number;
   monthly: AdminMonth[];
   by_courier: CourierSplit[];
+}
+
+export interface AdminKpis {
+  active_clients: number;
+  admin: AdminScopeKpis;
+  clients: AdminScopeKpis;
 }
 
 export interface ClientRow {

@@ -200,15 +200,20 @@ class CourierSplit(BaseModel):
     revenue: float
 
 
-class AdminKpis(BaseModel):
-    total_revenue: float
-    courier_costs: float
-    net_profit: float
-    net_margin_pct: float
-    total_shipments: int
-    active_clients: int
+class AdminScopeKpis(BaseModel):
+    revenue: float
+    costs: float
+    profit: float
+    margin_pct: float
+    shipments: int
     monthly: list[AdminMonth]
     by_courier: list[CourierSplit]
+
+
+class AdminKpis(BaseModel):
+    active_clients: int
+    admin: AdminScopeKpis
+    clients: AdminScopeKpis
 
 
 class MarkupRule(BaseModel):

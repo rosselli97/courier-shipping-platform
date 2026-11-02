@@ -4,6 +4,7 @@ import { Loader2, Percent, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import DashboardShell from "@/components/DashboardShell";
 import MarkupRules from "@/components/MarkupRules";
+import PalletRates from "@/components/PalletRates";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -411,6 +412,7 @@ export default function AdminRateLists() {
     >
       <div className="space-y-5">
         <MarkupRules />
+        <PalletRates />
         <section className="rounded-2xl border bg-card p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex-1">

@@ -132,6 +132,8 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 
 - **Centro di controllo** suddiviso: **Controllo super admin** su `/admin` (KPI, ricavi/costi, clienti attivi, tariffe pallet) e **Controllo clienti B2B** su `/admin/clienti` (clienti, saldi, stati); i ricarichi per corriere/listino/cliente sono gestiti in **Listini e ricarichi**.
 
+- **Centro di controllo**: due statistiche separate, **Spedizioni super admin** e **Spedizioni clienti B2B**, ognuna con guadagno netto, ricavi, costi, numero spedizioni, margine, grafico mensile e split per corriere.
+- **Tariffe pallet** spostate dalla dashboard alla sezione **Listini e ricarichi**.
 ## 7. Account demo
 
 | Ruolo | Email | Password |
