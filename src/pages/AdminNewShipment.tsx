@@ -25,7 +25,7 @@ export default function AdminNewShipment() {
   });
 
   return (
-    <DashboardShell role="admin" title="Nuova spedizione" subtitle="Compila i campi: la spedizione viene creata direttamente su TravelBox.">
+    <DashboardShell role="admin" title="Nuova spedizione" subtitle="Compila i campi: la spedizione viene creata su TravelBox con il ricarico configurato in Listini e ricarichi.">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,440px)_1fr] xl:items-start">
         <CalculatorForm onSubmit={(v, c) => { setReq(toReq(v)); setContactId(c); }} />
         <div data-testid="admin-new-shipment-results">

@@ -6,7 +6,7 @@ from travelbox.models import CreateShipmentResult, Money, Offer, Package, Party
 from travelbox.models import Shipment as TravelBoxShipment
 
 from app.database import Base
-from app.models import User
+from app.models import MarkupRule, User
 from app.schemas import TravelBoxCheckoutRequest
 from app.serializers import shipment_out
 from app.shipments import (
@@ -77,6 +77,8 @@ def _session():
 
 def test_record_travelbox_shipment_appears_in_local_list():
     db, user = _session()
+    db.add(MarkupRule(client_id=None, courier="poste", type="percent", value=0))
+    db.commit()
     shipment = record_travelbox_shipment(db, user, _body(), _result())
     assert shipment is not None
     assert shipment.tracking_code == "TBC-40123"

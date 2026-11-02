@@ -79,8 +79,6 @@ def client_overrides(db: Session, client_id: str) -> dict[str, tuple[str, float]
 
 
 def effective_markups(db: Session, user: User | None) -> dict[str, tuple[str, float]]:
-    if user is not None and user.role == "admin":
-        return {c: ("percent", 0.0) for c in COURIERS}
     rules = standard_rules(db)
     if user is not None:
         rules.update(client_overrides(db, user.id))
@@ -110,8 +108,6 @@ def effective_rate_markup(
     Ordine: override del cliente sul listino -> ricarico standard del listino
     -> ricarico per corriere (comportamento precedente).
     """
-    if user is not None and user.role == "admin":
-        return ("percent", 0.0)
     if list_id:
         if user is not None:
             row = db.scalar(

@@ -111,7 +111,8 @@ def test_rate_list_markups_standard_client_and_fallback():
     set_rate_list_markups(db, reseller.id, [{"list_id": "100", "type": "fixed", "value": 2.5}])
     assert effective_rate_markup(db, reseller, "100", "brt") == ("fixed", 2.5)
     assert effective_rate_markup(db, None, "100", "brt") == ("percent", 10.0)
-    assert effective_rate_markup(db, admin, "100", "brt") == ("percent", 0.0)
+    # Anche il super admin usa il ricarico standard del listino.
+    assert effective_rate_markup(db, admin, "100", "brt") == ("percent", 10.0)
 
     set_rate_list_markups(db, None, [])
     db.add(MarkupRule(client_id=None, courier="brt", type="percent", value=5))
@@ -155,8 +156,8 @@ def test_quote_filters_inactive_lists_and_applies_list_markup():
     assert client_quote.quotes[0].price == 12.0
 
     admin_quote = _build_quotes(result, sender, req, admin, db)
-    assert admin_quote.quotes[0].markup == 0.0
-    assert admin_quote.quotes[0].price == 10.0
+    assert admin_quote.quotes[0].markup == 2.0
+    assert admin_quote.quotes[0].price == 12.0
 
     lists = list_rate_lists(db, reseller.id)
     assert {row.id: row.active for row in lists} == {"A": True, "B": False}

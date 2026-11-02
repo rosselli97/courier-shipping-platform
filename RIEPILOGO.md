@@ -97,6 +97,8 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 
 - Nel dialog di creazione è presente il checkbox **Ritiro presso il mittente**: se selezionato, il connettore invia `serviziAggiuntivi[1]`, `ritiro_presso=mittente`, `ritiro_presso_mittente_hidden=1` e i dati del mittente nei campi di ritiro, così TravelBox prenota il ritiro all'indirizzo del mittente.
 
+- Il **super admin** ora applica anche alle proprie spedizioni i ricarichi configurati in **Listini e ricarichi** (standard per listino) o in **Regole di ricarico standard** (per corriere): preventivo e spedizione salvata mostrano il prezzo con ricarico.
+
 ### Cosa vuole TravelBox per creare la spedizione
 
 - **Mittente**: `mittente[id]` **numerico** della rubrica, più `cognomenome`, `indirizzo`, `email` (obbligatoria), `telefono` (min. 8 cifre), `contatto`; `codice_fiscale`/`partita_iva` opzionali.

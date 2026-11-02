@@ -22,14 +22,14 @@ export default function AdminShipments() {
     <DashboardShell
       role="admin"
       title="Spedizioni effettuate"
-      subtitle={data ? `${data.length} spedizioni interne · costo totale ${eur(total)}` : "Spedizioni create dal super admin."}
+      subtitle={data ? `${data.length} spedizioni interne · totale ${eur(total)}` : "Spedizioni create dal super admin."}
       actions={
         <Link to="/admin/nuova-spedizione" data-testid="admin-shipments-new-link" className={cn(buttonVariants(), "h-11 bg-brand px-5 font-semibold text-white hover:bg-brand-hover")}>
           <Plus className="size-4" /> Nuova spedizione
         </Link>
       }
     >
-      <ShipmentsTable title="Spedizioni del super admin" data={data} isPending={shipments.isPending} labelBase="/admin" tid="admin" priceLabel="Costo" />
+      <ShipmentsTable title="Spedizioni del super admin" data={data} isPending={shipments.isPending} labelBase="/admin" tid="admin" priceLabel="Prezzo" />
     </DashboardShell>
   );
 }
