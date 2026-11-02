@@ -35,18 +35,19 @@ export default function AdminNewShipment() {
     retry: false,
   });
 
+  const isTravelbox = quote.data?.provider === "travelbox";
   const markupAmount = Math.max(0, Number(markupValue) || 0);
-  const displayQuotes = useMemo(
-    () =>
-      (quote.data?.quotes ?? []).map((q) => {
-        const base = round2(q.base_cost + q.fuel_surcharge);
-        const markup = applyMarkup
-          ? round2(markupType === "percent" ? (base * markupAmount) / 100 : markupAmount)
-          : 0;
-        return { ...q, price: round2(base + markup), markup };
-      }),
-    [quote.data?.quotes, applyMarkup, markupType, markupAmount],
-  );
+  const displayQuotes = useMemo(() => {
+    const quotes = quote.data?.quotes ?? [];
+    if (!isTravelbox) return quotes;
+    return quotes.map((q) => {
+      const base = round2(q.base_cost + q.fuel_surcharge);
+      const markup = applyMarkup
+        ? round2(markupType === "percent" ? (base * markupAmount) / 100 : markupAmount)
+        : 0;
+      return { ...q, price: round2(base + markup), markup };
+    });
+  }, [quote.data?.quotes, isTravelbox, applyMarkup, markupType, markupAmount]);
 
   return (
     <DashboardShell role="admin" title="Nuova spedizione" subtitle="Compila i campi e decidi il ricarico da applicare alla spedizione.">
@@ -77,7 +78,7 @@ export default function AdminNewShipment() {
               {quote.data.notice && (
                 <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">{quote.data.notice}</p>
               )}
-              <div data-testid="admin-markup-panel" className="mb-4 rounded-2xl border bg-card p-4 shadow-sm">
+              {isTravelbox && <div data-testid="admin-markup-panel" className="mb-4 rounded-2xl border bg-card p-4 shadow-sm">
                 <label className="flex cursor-pointer items-start gap-3">
                   <Checkbox
                     data-testid="admin-apply-markup-checkbox"
@@ -117,7 +118,12 @@ export default function AdminNewShipment() {
                     </div>
                   </div>
                 )}
-              </div>
+              </div>}
+              {!isTravelbox && (
+                <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  Offerte demo/locali: il ricarico personalizzato è disponibile solo con le offerte reali TravelBox. In fallback si applicano i ricarichi standard.
+                </p>
+              )}
               <CourierSelectionList quotes={displayQuotes} onSelect={setSelected} />
             </>
           )}
@@ -130,7 +136,7 @@ export default function AdminNewShipment() {
           role="admin"
           prefillContactId={contactId}
           sender={quote.data?.sender}
-          markup={applyMarkup ? { apply: true, type: markupType, value: markupAmount } : { apply: false, type: markupType, value: 0 }}
+          markup={isTravelbox ? (applyMarkup ? { apply: true, type: markupType, value: markupAmount } : { apply: false, type: markupType, value: 0 }) : null}
           onClose={() => setSelected(null)}
         />
       )}
