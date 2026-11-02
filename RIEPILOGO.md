@@ -130,6 +130,8 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - Il CAP nel form interroga `GET /api/geo/comuni` e fa selezionare il comune; CAP + comune viaggiano nel preventivo (`origin_city`/`dest_city`) e vengono mostrati nel dialog di creazione spedizione.
 - Nel dialog di creazione mittente/destinatario partono vuoti; il nome è autocompletato dalla rubrica: mittente filtrato per CAP di partenza, destinatario su tutta la rubrica (prima i contatti del CAP di destinazione, gli altri con l'indicazione "CAP diverso"); selezionando il contatto si compilano nome, indirizzo, email (e contatto mittente). I CAP con i comuni scelti restano visibili nelle testate e in campi CAP/Paese non modificabili.
 
+- **Centro di controllo** suddiviso: **Controllo super admin** su `/admin` (KPI, ricavi/costi, clienti attivi, tariffe pallet) e **Controllo clienti B2B** su `/admin/clienti` (clienti, saldi, stati); i ricarichi per corriere/listino/cliente sono gestiti in **Listini e ricarichi**.
+
 ## 7. Account demo
 
 | Ruolo | Email | Password |
