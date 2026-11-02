@@ -28,6 +28,7 @@ from .models import (
     Party,
     Quote,
     RateList,
+    RateRow,
     Shipment,
 )
 
@@ -337,6 +338,129 @@ def parse_rate_lists(html: str) -> list[RateList]:
                     fetched_at=_now(),
                 )
             )
+    return out
+
+
+def parse_rate_list_details(html: str) -> list[RateRow]:
+    """Fasce di prezzo da `/dettaglilistino?id_listino=...`.
+
+    La tabella espone: Tipologia Spedizione, Tipologia Tariffa, Peso Min/Max,
+    Volume Min/Max, Prezzo Imponibile, Valuta, Note.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    out: list[RateRow] = []
+    for table in soup.find_all("table"):
+        rows = table.find_all("tr")
+        if not rows:
+            continue
+        headers = [clean(cell.get_text(" ")).lower() for cell in rows[0].find_all(["th", "td"])]
+        if not headers or not any("peso" in h for h in headers) or not any("prezzo" in h for h in headers):
+            continue
+
+        def column(*needles: str, fallback: int | None = None) -> int | None:
+            for index, header in enumerate(headers):
+                if all(needle in header for needle in needles):
+                    return index
+            return fallback
+
+        type_idx = column("tipologia", "spedizione", fallback=0)
+        tariff_idx = column("tipologia", "tariffa", fallback=1)
+        weight_min_idx = column("peso", "min", fallback=2)
+        weight_max_idx = column("peso", "max", fallback=3)
+        volume_min_idx = column("volume", "min", fallback=4)
+        volume_max_idx = column("volume", "max", fallback=5)
+        price_idx = column("prezzo", fallback=6)
+        currency_idx = column("valuta", fallback=7)
+        notes_idx = column("note", fallback=8)
+
+        def cell(cells: list[str], index: int | None) -> str:
+            if index is None or index < 0 or index >= len(cells):
+                return ""
+            return cells[index]
+
+        for tr in rows[1:]:
+            cells = [clean(td.get_text(" ")) for td in tr.find_all("td")]
+            if len(cells) < 3:
+                continue
+            price_text = cell(cells, price_idx)
+            if not price_text:
+                continue
+            money = parse_money(price_text)
+            price = money.amount if money is not None else None
+            if price is None:
+                price_value = to_float(price_text)
+                price = Decimal(str(price_value)) if price_value is not None else None
+            currency = cell(cells, currency_idx) or (money.currency if money is not None else "EUR")
+            out.append(
+                RateRow(
+                    shipment_type=cell(cells, type_idx) or None,
+                    tariff_type=cell(cells, tariff_idx) or None,
+                    weight_min=to_float(cell(cells, weight_min_idx)),
+                    weight_max=to_float(cell(cells, weight_max_idx)),
+                    volume_min=to_float(cell(cells, volume_min_idx)),
+                    volume_max=to_float(cell(cells, volume_max_idx)),
+                    price=price,
+                    currency=currency or "EUR",
+                    notes=cell(cells, notes_idx) or None,
+                    fetched_at=_now(),
+                )
+            )
+    return out
+
+
+def parse_rate_list_matrix(html: str) -> list[RateRow]:
+    """Matrice prezzi dei listini EXPORT/IMPORT da `/viewlistino?id=...`.
+
+    Righe = nazione, colonne = fasce di peso. Ogni cella diventa una RateRow:
+    `shipment_type` e' la nazione, `tariff_type` la fascia.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    out: list[RateRow] = []
+    for table in soup.find_all("table"):
+        rows = table.find_all("tr")
+        if len(rows) < 2:
+            continue
+        headers = [clean(cell.get_text(" ")) for cell in rows[0].find_all(["th", "td"])]
+        if not headers or "nazione" not in headers[0].lower():
+            continue
+
+        bands: list[tuple[float | None, float | None, str]] = []
+        for header in headers[1:]:
+            match = re.search(r"Da\s*([\d.,]+)\s*Kg\s*a\s*([\d.,]+)", header, re.IGNORECASE)
+            if match:
+                bands.append((to_float(match.group(1)), to_float(match.group(2)), header))
+            else:
+                bands.append((None, None, header))
+        if not any(band[0] is not None for band in bands):
+            continue
+
+        for tr in rows[1:]:
+            cells = [clean(td.get_text(" ")) for td in tr.find_all("td")]
+            if len(cells) < 2:
+                continue
+            country = cells[0]
+            if not country:
+                continue
+            for index, (weight_min, weight_max, label) in enumerate(bands, start=1):
+                if index >= len(cells):
+                    break
+                money = parse_money(cells[index])
+                if money is None:
+                    continue
+                out.append(
+                    RateRow(
+                        shipment_type=country,
+                        tariff_type=label,
+                        weight_min=weight_min,
+                        weight_max=weight_max,
+                        volume_min=0.0,
+                        volume_max=0.0,
+                        price=money.amount,
+                        currency=money.currency or "EUR",
+                        notes=None,
+                        fetched_at=_now(),
+                    )
+                )
     return out
 
 

@@ -221,6 +221,21 @@ class RateList(BaseModel):
     fetched_at: Optional[datetime] = None
 
 
+class RateRow(BaseModel):
+    """Fascia di prezzo di un listino (`/dettaglilistino`)."""
+
+    shipment_type: Optional[str] = None
+    tariff_type: Optional[str] = None
+    weight_min: Optional[float] = None
+    weight_max: Optional[float] = None
+    volume_min: Optional[float] = None
+    volume_max: Optional[float] = None
+    price: Optional[Decimal] = None
+    currency: str = "EUR"
+    notes: Optional[str] = None
+    fetched_at: Optional[datetime] = None
+
+
 class Invoice(BaseModel):
     number: Optional[str] = None
     date: Optional[str] = None

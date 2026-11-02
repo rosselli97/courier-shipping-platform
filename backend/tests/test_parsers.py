@@ -16,6 +16,8 @@ from travelbox.parsers import (
     parse_money,
     parse_offers,
     parse_quotes,
+    parse_rate_list_details,
+    parse_rate_list_matrix,
     parse_rate_lists,
     parse_shipment_detail,
     parse_shipments,
@@ -434,3 +436,67 @@ def test_parse_account_anagrafica():
     assert data["ragione_sociale"] == "FRANCESCO GIULIANO"
     assert data["email"] == "alessio.rosselli97@gmail.com"
     assert parse_account_anagrafica_id(ACCOUNT_ANAGRAFICA_HTML) == "634"
+
+
+RATE_LIST_DETAILS_HTML = '''
+<table class="table">
+  <tr>
+    <th>Tipologia Spedizione</th><th>Tipologia Tariffa</th>
+    <th>Peso Min (kg)</th><th>Peso Max (kg)</th>
+    <th>Volume Min (m3)</th><th>Volume Max (m3)</th>
+    <th>Prezzo Imponibile</th><th>Valuta</th><th>Note</th><th></th>
+  </tr>
+  <tr>
+    <td>Pacchi</td><td>Express</td><td>0.000</td><td>3.000</td>
+    <td>0.0000</td><td>0.0000</td><td>6.08</td><td>EUR</td><td></td><td>x</td>
+  </tr>
+  <tr>
+    <td>Pacchi</td><td>Express</td><td>3.010</td><td>5.000</td>
+    <td>0.0000</td><td>0.0000</td><td>6,52</td><td>EUR</td><td>promo</td><td>x</td>
+  </tr>
+  <tr>
+    <td>Pacchi</td><td>Express</td><td>5.010</td><td>10.000</td>
+    <td>0.0000</td><td>0.0000</td><td></td><td>EUR</td><td></td><td>x</td>
+  </tr>
+</table>
+'''
+
+
+def test_parse_rate_list_details_reads_price_rows():
+    rows = parse_rate_list_details(RATE_LIST_DETAILS_HTML)
+    assert len(rows) == 2
+    assert rows[0].shipment_type == "Pacchi"
+    assert rows[0].tariff_type == "Express"
+    assert float(rows[0].weight_max) == 3.0
+    assert float(rows[0].price) == 6.08
+    assert rows[0].currency == "EUR"
+    assert float(rows[1].price) == 6.52
+    assert rows[1].notes == "promo"
+
+RATE_LIST_MATRIX_HTML = '''
+<table class="table">
+  <tr>
+    <th>Nazione</th>
+    <th>Kg Da 0,00 Kg a 1,00</th>
+    <th>Kg Da 1,01 Kg a 2,00</th>
+    <th>Kg Da 2,01 Kg a 5,00</th>
+  </tr>
+  <tr>
+    <td>Austria Documenti Pacchi</td><td>20.21</td><td>27.59</td><td>31.70</td>
+  </tr>
+  <tr>
+    <td>Belgio Documenti Pacchi</td><td>20.21</td><td></td><td>31.70</td>
+  </tr>
+</table>
+'''
+
+
+def test_parse_rate_list_matrix_reads_country_and_weight_bands():
+    rows = parse_rate_list_matrix(RATE_LIST_MATRIX_HTML)
+    assert len(rows) == 5
+    assert rows[0].shipment_type == "Austria Documenti Pacchi"
+    assert rows[0].weight_min == 0.0
+    assert rows[0].weight_max == 1.0
+    assert float(rows[0].price) == 20.21
+    assert rows[-1].shipment_type == "Belgio Documenti Pacchi"
+    assert float(rows[-1].price) == 31.70

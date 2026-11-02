@@ -169,6 +169,50 @@ export interface MarkupRule {
   value: number;
 }
 
+export interface RateMarkup {
+  type: MarkupType;
+  value: number;
+}
+
+export interface RateListRow {
+  shipment_type: string;
+  tariff_type: string;
+  weight_min: number;
+  weight_max: number;
+  volume_min: number;
+  volume_max: number;
+  price: number;
+  currency: string;
+  notes: string;
+}
+
+export interface RateList {
+  id: string;
+  name: string;
+  type: string;
+  carrier: string;
+  owner: string;
+  valid_from: string;
+  valid_to: string;
+  cloned_from: string;
+  active: boolean;
+  imported_at: string;
+  row_count: number;
+  standard_markup: RateMarkup | null;
+  client_markup: RateMarkup | null;
+}
+
+export interface RateListDetail extends RateList {
+  rows: RateListRow[];
+}
+
+export interface RateListImportResult {
+  lists: number;
+  rows: number;
+  failed: number;
+  imported_at: string;
+}
+
 export interface AdminMonth {
   month: string;
   revenue: number;

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .geo import PALLET_ZONES, city_for_cap, pallet_zone
-from .models import MarkupRule, PalletRate, User
+from .models import MarkupRule, PalletRate, RateListMarkup, User
 from .schemas import CourierId, CourierQuote, QuoteRequest, QuoteResponse
 
 COURIERS: dict[str, dict] = {
@@ -85,6 +85,52 @@ def effective_markups(db: Session, user: User | None) -> dict[str, tuple[str, fl
     if user is not None:
         rules.update(client_overrides(db, user.id))
     return rules
+
+
+def rate_list_markups(db: Session, client_id: str | None) -> dict[str, tuple[str, float]]:
+    condition = RateListMarkup.client_id.is_(None) if client_id is None else RateListMarkup.client_id == client_id
+    return {
+        row.list_id: (row.type, row.value)
+        for row in db.scalars(select(RateListMarkup).where(condition))
+    }
+
+
+def standard_rate_list_markups(db: Session) -> dict[str, tuple[str, float]]:
+    return rate_list_markups(db, None)
+
+
+def effective_rate_markup(
+    db: Session,
+    user: User | None,
+    list_id: str | None,
+    courier: str,
+) -> tuple[str, float]:
+    """Ricarico effettivo di un listino per un cliente.
+
+    Ordine: override del cliente sul listino -> ricarico standard del listino
+    -> ricarico per corriere (comportamento precedente).
+    """
+    if user is not None and user.role == "admin":
+        return ("percent", 0.0)
+    if list_id:
+        if user is not None:
+            row = db.scalar(
+                select(RateListMarkup).where(
+                    RateListMarkup.client_id == user.id,
+                    RateListMarkup.list_id == list_id,
+                )
+            )
+            if row is not None:
+                return (row.type, row.value)
+        row = db.scalar(
+            select(RateListMarkup).where(
+                RateListMarkup.client_id.is_(None),
+                RateListMarkup.list_id == list_id,
+            )
+        )
+        if row is not None:
+            return (row.type, row.value)
+    return effective_markups(db, user).get(courier, ("percent", 0.0))
 
 
 def pallet_price(db: Session, courier: str, zone: int) -> float:

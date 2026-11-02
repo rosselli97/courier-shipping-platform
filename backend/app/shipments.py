@@ -14,7 +14,7 @@ from travelbox.models import CreateShipmentResult, Shipment as TravelBoxShipment
 from .geo import city_for_cap
 from .models import Contact, Shipment, TrackingEvent, User, WalletTx
 from .notify import send_shipment_email
-from .pricing import COURIERS, billable_weight, quote_for_courier
+from .pricing import COURIERS, _markup_amount, billable_weight, effective_rate_markup, quote_for_courier
 from .schemas import ShipmentCreate, TravelBoxCheckoutRequest
 
 TRAVELBOX_PREFIX = "TBC-"
@@ -439,6 +439,12 @@ def record_travelbox_shipment(
     net = _money_amount(offer.net_price if offer else None)
     tax = _money_amount(offer.tax if offer else None)
     base_cost = net if net > 0 else price
+    courier_id = _travelbox_courier((offer.carrier if offer else None) or remote.carrier)
+    markup = 0.0
+    if offer is not None:
+        rule_type, rule_value = effective_rate_markup(db, user, offer.list_id, courier_id)
+        markup = _markup_amount(rule_type, rule_value, price)
+    selling_price = round(price + markup, 2)
     billable = (
         float(offer.weight_kg)
         if offer is not None and offer.weight_kg
@@ -449,7 +455,7 @@ def record_travelbox_shipment(
         tracking_code=reference,
         owner_id=user.id,
         is_admin_shipment=user.role == "admin",
-        courier=_travelbox_courier((offer.carrier if offer else None) or remote.carrier),
+        courier=courier_id,
         origin_cap=body.origin_cap,
         origin_city=body.origin_city or city_for_cap(body.origin_cap),
         dest_cap=body.dest_cap,
@@ -465,7 +471,7 @@ def record_travelbox_shipment(
         is_pallet=body.is_pallet,
         base_cost=base_cost,
         fuel_surcharge=tax,
-        price=price,
+        price=selling_price,
         status="creata",
         email_status="none",
     )

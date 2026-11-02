@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -227,6 +228,65 @@ class ClientMarkup(BaseModel):
 
 class ClientMarkupBody(BaseModel):
     overrides: list[MarkupRule]
+
+
+class RateMarkupRule(BaseModel):
+    type: MarkupType
+    value: float = Field(ge=0)
+
+
+class RateListRowOut(BaseModel):
+    shipment_type: str
+    tariff_type: str
+    weight_min: float
+    weight_max: float
+    volume_min: float
+    volume_max: float
+    price: float
+    currency: str
+    notes: str
+
+
+class RateListOut(BaseModel):
+    id: str
+    name: str
+    type: str
+    carrier: str
+    owner: str
+    valid_from: str
+    valid_to: str
+    cloned_from: str
+    active: bool
+    imported_at: datetime
+    row_count: int
+    standard_markup: RateMarkupRule | None = None
+    client_markup: RateMarkupRule | None = None
+
+
+class RateListDetailOut(RateListOut):
+    rows: list[RateListRowOut]
+
+
+class RateListActiveBody(BaseModel):
+    active: bool
+
+
+class RateListMarkupItem(BaseModel):
+    list_id: str
+    type: MarkupType
+    value: float = Field(ge=0)
+
+
+class RateListMarkupsBody(BaseModel):
+    client_id: str | None = None
+    rules: list[RateListMarkupItem]
+
+
+class RateListImportResult(BaseModel):
+    lists: int
+    rows: int
+    failed: int
+    imported_at: datetime
 
 
 class PalletRate(BaseModel):

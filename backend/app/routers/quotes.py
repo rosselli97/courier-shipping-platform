@@ -20,7 +20,7 @@ logger = logging.getLogger("muvpack.quote")
 @router.post("/quote", response_model=QuoteResponse)
 def quote(body: QuoteRequest, user: User | None = Depends(get_optional_user), db: Session = Depends(get_db)):
     if body.source in ("auto", "travelbox") and TRAVELBOX_QUOTES_ENABLED:
-        travelbox = quote_with_travelbox(body, user)
+        travelbox = quote_with_travelbox(body, user, db)
         if travelbox is not None:
             return travelbox
 

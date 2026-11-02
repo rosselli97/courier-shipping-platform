@@ -60,6 +60,58 @@ class PalletRate(Base):
     price: Mapped[float] = mapped_column(Float)
 
 
+class TravelBoxRateList(Base):
+    __tablename__ = "travelbox_rate_lists"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), default="")
+    type: Mapped[str] = mapped_column(String(32), default="")
+    carrier: Mapped[str] = mapped_column(String(64), default="")
+    owner: Mapped[str] = mapped_column(String(255), default="")
+    valid_from: Mapped[str] = mapped_column(String(32), default="")
+    valid_to: Mapped[str] = mapped_column(String(32), default="")
+    cloned_from: Mapped[str] = mapped_column(String(255), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    rows: Mapped[list[TravelBoxRateRow]] = relationship(
+        back_populates="rate_list", cascade="all, delete-orphan"
+    )
+
+
+class TravelBoxRateRow(Base):
+    __tablename__ = "travelbox_rate_rows"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    list_id: Mapped[str] = mapped_column(
+        ForeignKey("travelbox_rate_lists.id", ondelete="CASCADE"), index=True
+    )
+    shipment_type: Mapped[str] = mapped_column(String(64), default="")
+    tariff_type: Mapped[str] = mapped_column(String(64), default="")
+    weight_min: Mapped[float] = mapped_column(Float, default=0.0)
+    weight_max: Mapped[float] = mapped_column(Float, default=0.0)
+    volume_min: Mapped[float] = mapped_column(Float, default=0.0)
+    volume_max: Mapped[float] = mapped_column(Float, default=0.0)
+    price: Mapped[float] = mapped_column(Float, default=0.0)
+    currency: Mapped[str] = mapped_column(String(8), default="EUR")
+    notes: Mapped[str] = mapped_column(String(255), default="")
+
+    rate_list: Mapped[TravelBoxRateList] = relationship(back_populates="rows")
+
+
+class RateListMarkup(Base):
+    __tablename__ = "rate_list_markups"
+    __table_args__ = (UniqueConstraint("client_id", "list_id", name="uq_rate_list_markup_client_list"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    list_id: Mapped[str] = mapped_column(
+        ForeignKey("travelbox_rate_lists.id", ondelete="CASCADE"), index=True
+    )
+    type: Mapped[str] = mapped_column(String(16), default="percent")
+    value: Mapped[float] = mapped_column(Float, default=0.0)
+
+
 class Shipment(Base):
     __tablename__ = "shipments"
 

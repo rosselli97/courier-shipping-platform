@@ -4,6 +4,9 @@ import logging
 import threading
 import time
 
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
 from travelbox import parsers
 from travelbox.api import get_client
 from travelbox.config import Settings
@@ -34,7 +37,7 @@ FRIENDLY = {
     "other": "Corriere",
 }
 
-_cache: dict[tuple, tuple[float, QuoteResponse]] = {}
+_cache: dict[tuple, tuple[float, dict]] = {}
 _cache_lock = threading.Lock()
 _client_lock = threading.Lock()
 # Alias pubblico per chi usa lo stesso client (es. import storico).
@@ -221,7 +224,7 @@ def _resolve_sender() -> dict[str, str] | None:
     return None
 
 
-def _cache_get(key: tuple) -> QuoteResponse | None:
+def _cache_get(key: tuple) -> dict | None:
     now = time.monotonic()
     with _cache_lock:
         entry = _cache.get(key)
@@ -230,7 +233,7 @@ def _cache_get(key: tuple) -> QuoteResponse | None:
     return None
 
 
-def _cache_set(key: tuple, value: QuoteResponse) -> None:
+def _cache_set(key: tuple, value: dict) -> None:
     if TRAVELBOX_QUOTE_CACHE_TTL <= 0:
         return
     with _cache_lock:
@@ -296,7 +299,83 @@ def _build_draft(
     )
 
 
-def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse | None:
+def _active_rate_list_ids(db: Session | None) -> set[str] | None:
+    if db is None:
+        return None
+    from .models import TravelBoxRateList
+
+    total = db.scalar(select(func.count()).select_from(TravelBoxRateList)) or 0
+    if total <= 0:
+        return None
+    return set(
+        db.scalars(select(TravelBoxRateList.id).where(TravelBoxRateList.active.is_(True))).all()
+    )
+
+
+def _build_quotes(result, sender: dict[str, str], req: QuoteRequest, user: User | None, db: Session | None) -> QuoteResponse:
+    from .pricing import _markup_amount, effective_rate_markup
+
+    active = _active_rate_list_ids(db)
+    billable, volumetric = billable_weight(req)
+    zone = PALLET_ZONES[pallet_zone(req.origin_cap, req.dest_cap)] if req.is_pallet else None
+
+    quotes: list[CourierQuote] = []
+    for offer in result.offers:
+        if active is not None and offer.list_id and offer.list_id not in active:
+            continue
+        net = _amount(offer.net_price)
+        tax = _amount(offer.tax)
+        total = _amount(offer.price) or round(net + tax, 2)
+        courier = _carrier_id(offer.carrier)
+        markup = 0.0
+        if db is not None:
+            rule_type, rule_value = effective_rate_markup(db, user, offer.list_id, courier)
+            markup = _markup_amount(rule_type, rule_value, total)
+        quotes.append(
+            CourierQuote(
+                id=offer.id,
+                courier=courier,  # type: ignore[arg-type]
+                courier_name=FRIENDLY.get(courier, offer.carrier or "Corriere"),
+                service_name=offer.carrier or offer.service or "TravelBox",
+                delivery_time=offer.delivery_days or "Tempi indicati dal portale",
+                features=[],
+                base_cost=round(net, 2),
+                fuel_surcharge=round(tax, 2),
+                markup=round(markup, 2),
+                price=round(total + markup, 2),
+                source="travelbox",
+                price_includes_vat=True,
+            )
+        )
+
+    return QuoteResponse(
+        is_pallet=req.is_pallet,
+        pallet_zone=zone,
+        billable_weight_kg=billable,
+        volumetric_weight_kg=volumetric,
+        origin_city=req.origin_city or city_for_cap(req.origin_cap),
+        dest_city=req.dest_city or city_for_cap(req.dest_cap),
+        quotes=quotes,
+        provider="travelbox",
+        notice=result.message or (None if quotes else "Nessuna offerta TravelBox per questa tratta"),
+        sender=QuoteParty(
+            name=sender.get("name") or None,
+            street=sender.get("street") or None,
+            city=city_for_cap(req.origin_cap),
+            province=sender.get("province") or None,
+            postal_code=req.origin_cap,
+            email=sender.get("email") or None,
+            phone=sender.get("phone") or sender.get("mobile") or None,
+            contact=sender.get("contact") or sender.get("name") or None,
+        ),
+    )
+
+
+def quote_with_travelbox(
+    req: QuoteRequest,
+    user: User | None,
+    db: Session | None = None,
+) -> QuoteResponse | None:
     if not TRAVELBOX_QUOTES_ENABLED:
         return None
     if not _settings.userid or not _settings.password:
@@ -318,7 +397,7 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
     )
     cached = _cache_get(key)
     if cached is not None:
-        return cached
+        return _build_quotes(cached["result"], cached["sender"], req, user, db)
 
     sender = _resolve_sender()
     if sender is None:
@@ -334,55 +413,8 @@ def quote_with_travelbox(req: QuoteRequest, user: User | None) -> QuoteResponse 
         logger.exception("TravelBox: preventivo non disponibile")
         return None
 
-    billable, volumetric = billable_weight(req)
-    zone = PALLET_ZONES[pallet_zone(req.origin_cap, req.dest_cap)] if req.is_pallet else None
-
-    quotes: list[CourierQuote] = []
-    for offer in result.offers:
-        net = _amount(offer.net_price)
-        tax = _amount(offer.tax)
-        total = _amount(offer.price) or round(net + tax, 2)
-        courier = _carrier_id(offer.carrier)
-        quotes.append(
-            CourierQuote(
-                id=offer.id,
-                courier=courier,  # type: ignore[arg-type]
-                courier_name=FRIENDLY.get(courier, offer.carrier or "Corriere"),
-                service_name=offer.carrier or offer.service or "TravelBox",
-                delivery_time=offer.delivery_days or "Tempi indicati dal portale",
-                features=[],
-                base_cost=round(net, 2),
-                fuel_surcharge=round(tax, 2),
-                markup=0.0,
-                price=round(total, 2),
-                source="travelbox",
-                price_includes_vat=True,
-            )
-        )
-
-    response = QuoteResponse(
-        is_pallet=req.is_pallet,
-        pallet_zone=zone,
-        billable_weight_kg=billable,
-        volumetric_weight_kg=volumetric,
-        origin_city=req.origin_city or city_for_cap(req.origin_cap),
-        dest_city=req.dest_city or city_for_cap(req.dest_cap),
-        quotes=quotes,
-        provider="travelbox",
-        notice=result.message or (None if quotes else "Nessuna offerta TravelBox per questa tratta"),
-        sender=QuoteParty(
-            name=sender.get("name") or None,
-            street=sender.get("street") or None,
-            city=city_for_cap(req.origin_cap),
-            province=sender.get("province") or None,
-            postal_code=req.origin_cap,
-            email=sender.get("email") or None,
-            phone=sender.get("phone") or sender.get("mobile") or None,
-            contact=sender.get("contact") or sender.get("name") or None,
-        ),
-    )
-    _cache_set(key, response)
-    return response
+    _cache_set(key, {"result": result, "sender": sender})
+    return _build_quotes(result, sender, req, user, db)
 
 
 def preview_travelbox_booking(

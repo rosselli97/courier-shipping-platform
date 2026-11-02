@@ -73,7 +73,7 @@ export default function CourierSelectionList({ quotes, onSelect, pendingCourier 
             <div className="mt-4 flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
               <p data-testid="courier-price-breakdown" className="font-mono text-[11px] text-muted-foreground">
                 {q.source === "travelbox"
-                  ? `Netto ${eur(q.base_cost)} · IVA ${eur(q.fuel_surcharge)}`
+                  ? `Netto ${eur(q.base_cost)} · IVA ${eur(q.fuel_surcharge)}${q.markup > 0 ? ` · Servizio ${eur(q.markup)}` : ""}`
                   : `Tariffa ${eur(q.base_cost)} · Carburante ${eur(q.fuel_surcharge)} · Servizio ${eur(q.markup)}`}
               </p>
               <Button

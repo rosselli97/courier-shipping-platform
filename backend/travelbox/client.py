@@ -34,6 +34,7 @@ from .models import (
     Quote,
     QuoteResult,
     RateList,
+    RateRow,
     Shipment,
     ShipmentDraft,
 )
@@ -311,6 +312,18 @@ class TravelBoxClient:
 
     def rate_lists(self) -> list[RateList]:
         return parsers.parse_rate_lists(self._get_html("/listini"))
+
+    def rate_list_details(self, list_id: str) -> list[RateRow]:
+        """Fasce di prezzo di un listino (`/dettaglilistino`)."""
+        value = str(list_id).strip()
+        html = self._get_html(f"/dettaglilistino?id_listino={value}")
+        return parsers.parse_rate_list_details(html)
+
+    def rate_list_matrix(self, list_id: str) -> list[RateRow]:
+        """Matrice nazione/fasce dei listini export/import (`/viewlistino`)."""
+        value = str(list_id).strip()
+        html = self._get_html(f"/viewlistino?id={value}")
+        return parsers.parse_rate_list_matrix(html)
 
     def invoices(self) -> list[Invoice]:
         return parsers.parse_invoices(self._get_html("/elencofatture"))
