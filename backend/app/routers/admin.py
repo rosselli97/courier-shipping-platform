@@ -23,6 +23,8 @@ from ..schemas import (
     AdminKpis,
     AdminMonth,
     AdminScopeKpis,
+    AdminWallet,
+    AdminWalletTopupBody,
     ClientCreate,
     ClientMarkup,
     ClientMarkupBody,
@@ -39,7 +41,7 @@ from ..schemas import (
     WalletAdjustBody,
 )
 from ..security import hash_password
-from ..serializers import client_row, shipment_out
+from ..serializers import client_row, shipment_out, wallet_tx_out
 from ..shipments import (
     advance_tracking,
     create_shipment,
@@ -134,6 +136,49 @@ def kpis(_: User = Depends(require_admin), db: Session = Depends(get_db)):
         admin=_scope_kpis(admin_shipments),
         clients=_scope_kpis(client_shipments),
     )
+
+
+def _admin_wallet(user: User, db: Session) -> AdminWallet:
+    rows = list(
+        db.scalars(
+            select(WalletTx)
+            .where(WalletTx.user_id == user.id)
+            .order_by(WalletTx.created_at.desc())
+            .limit(20)
+        )
+    )
+    return AdminWallet(
+        balance=round(user.wallet_balance, 2),
+        transactions=[wallet_tx_out(row) for row in rows],
+    )
+
+
+@router.get("/wallet", response_model=AdminWallet)
+def get_admin_wallet(user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    return _admin_wallet(user, db)
+
+
+@router.post("/wallet/topup", response_model=AdminWallet)
+def topup_admin_wallet(
+    body: AdminWalletTopupBody,
+    user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    amount = round(body.amount, 2)
+    user.wallet_balance = round(user.wallet_balance + amount, 2)
+    db.add(
+        WalletTx(
+            user_id=user.id,
+            type="topup",
+            amount=amount,
+            ref=None,
+            note=body.note or "Ricarica conto super admin",
+            balance_after=user.wallet_balance,
+        )
+    )
+    db.commit()
+    db.refresh(user)
+    return _admin_wallet(user, db)
 
 
 @router.get("/clients", response_model=list[ClientRow])

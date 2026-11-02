@@ -441,7 +441,11 @@ def record_travelbox_shipment(
     base_cost = net if net > 0 else price
     courier_id = _travelbox_courier((offer.carrier if offer else None) or remote.carrier)
     markup = 0.0
-    if offer is not None:
+    if body.apply_markup is False:
+        markup = 0.0
+    elif body.markup_type is not None and body.markup_value is not None:
+        markup = _markup_amount(body.markup_type, body.markup_value, price)
+    elif offer is not None:
         rule_type, rule_value = effective_rate_markup(db, user, offer.list_id, courier_id)
         markup = _markup_amount(rule_type, rule_value, price)
     selling_price = round(price + markup, 2)

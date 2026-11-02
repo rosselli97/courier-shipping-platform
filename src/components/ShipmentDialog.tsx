@@ -40,9 +40,11 @@ interface Props {
   prefillContactId?: string | null;
   /** TravelBox sender data coming from the quote */
   sender?: QuoteParty | null;
+  /** Admin override: choose the markup to apply to this shipment. */
+  markup?: { apply: boolean; type: "percent" | "fixed"; value: number } | null;
 }
 
-export default function ShipmentDialog({ quote, request, onClose, role = "reseller", onCreated, prefillContactId, sender }: Props) {
+export default function ShipmentDialog({ quote, request, onClose, role = "reseller", onCreated, prefillContactId, sender, markup = null }: Props) {
   const isAdmin = role === "admin";
   const originLabel = [request.origin_cap, request.origin_city].filter(Boolean).join(" ");
   const destLabel = [request.dest_cap, request.dest_city].filter(Boolean).join(" ");
@@ -284,6 +286,9 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
                 pickup_date: pickupAtSender ? pickupDate || null : null,
                 pickup_slot: pickupAtSender ? pickupSlot : null,
                 pickup_at_sender: pickupAtSender,
+                apply_markup: markup?.apply ?? null,
+                markup_type: markup?.type ?? null,
+                markup_value: markup?.value ?? null,
                 confirm: true,
               });
               return;

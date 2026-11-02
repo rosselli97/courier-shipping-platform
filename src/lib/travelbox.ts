@@ -144,6 +144,9 @@ export interface TravelBoxCheckoutPayload {
   pickup_date?: string | null;
   pickup_slot?: "9-12" | "12-15" | "15-18" | "18-21" | null;
   pickup_at_sender?: boolean;
+  apply_markup?: boolean | null;
+  markup_type?: "percent" | "fixed" | null;
+  markup_value?: number | null;
   confirm?: boolean;
 }
 

@@ -241,6 +241,11 @@ export interface AdminKpis {
   clients: AdminScopeKpis;
 }
 
+export interface AdminWallet {
+  balance: number;
+  transactions: WalletTx[];
+}
+
 export interface ClientRow {
   id: string;
   email: string;

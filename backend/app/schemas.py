@@ -216,6 +216,16 @@ class AdminKpis(BaseModel):
     clients: AdminScopeKpis
 
 
+class AdminWallet(BaseModel):
+    balance: float
+    transactions: list[WalletTxOut]
+
+
+class AdminWalletTopupBody(BaseModel):
+    amount: float = Field(gt=0)
+    note: str | None = None
+
+
 class MarkupRule(BaseModel):
     courier: CourierId
     type: MarkupType
@@ -452,6 +462,9 @@ class TravelBoxCheckoutRequest(QuoteRequest):
     pickup_date: str | None = None
     pickup_slot: Literal["9-12", "12-15", "15-18", "18-21"] | None = None
     pickup_at_sender: bool = False
+    apply_markup: bool | None = None
+    markup_type: Literal["percent", "fixed"] | None = None
+    markup_value: float | None = Field(default=None, ge=0)
     confirm: bool = True
 
     @field_validator("recipient_email")
