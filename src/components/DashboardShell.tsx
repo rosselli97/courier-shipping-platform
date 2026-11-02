@@ -26,7 +26,7 @@ interface NavItem { to: string; label: string; icon: typeof Package; testId: str
 
 const ADMIN_NAV: NavItem[] = [
   { to: "/admin", label: "Centro di controllo", icon: ShieldCheck, testId: "nav-admin", hint: "KPI, ricavi e tariffe" },
-  { to: "/admin/nuova-spedizione", label: "Nuova spedizione", icon: Calculator, testId: "nav-admin-new-shipment", hint: "Spedisci con il ricarico configurato" },
+  { to: "/admin/nuova-spedizione", label: "Nuova spedizione", icon: Calculator, testId: "nav-admin-new-shipment", hint: "Spedisci e decidi il ricarico" },
   { to: "/admin/spedizioni", label: "Spedizioni effettuate", icon: Package, testId: "nav-admin-shipments", hint: "Elenco ed etichette PDF" },
   { to: "/admin/clienti", label: "Clienti B2B", icon: Users, testId: "nav-admin-clients", hint: "Clienti, saldi e stati" },
   { to: "/admin/listini", label: "Listini e ricarichi", icon: Tags, testId: "nav-admin-rate-lists", hint: "Listini TravelBox e margini clienti" },
