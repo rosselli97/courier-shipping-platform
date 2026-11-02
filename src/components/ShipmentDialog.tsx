@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CourierLogo } from "@/components/brand";
@@ -58,6 +59,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
   const [description, setDescription] = useState("");
   const [pickupDate, setPickupDate] = useState(nextPickupDate);
   const [pickupSlot, setPickupSlot] = useState<"9-12" | "12-15" | "15-18" | "18-21">("9-12");
+  const [pickupAtSender, setPickupAtSender] = useState(false);
   const [tbResult, setTbResult] = useState<TravelBoxCheckoutResult | null>(null);
   const [senderFocus, setSenderFocus] = useState(false);
   const [recipientFocus, setRecipientFocus] = useState(false);
@@ -70,6 +72,7 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
     setDescription("");
     setPickupDate(nextPickupDate());
     setPickupSlot("9-12");
+    setPickupAtSender(false);
   }, [open, quote?.source]);
   useEffect(() => {
     if (!open) return;
@@ -278,8 +281,9 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
                 sender_phone: senderPhone.trim() || null,
                 sender_contact: senderContact.trim() || null,
                 description: description.trim() || null,
-                pickup_date: pickupDate || null,
-                pickup_slot: pickupSlot,
+                pickup_date: pickupAtSender ? pickupDate || null : null,
+                pickup_slot: pickupAtSender ? pickupSlot : null,
+                pickup_at_sender: pickupAtSender,
                 confirm: true,
               });
               return;
@@ -397,26 +401,39 @@ export default function ShipmentDialog({ quote, request, onClose, role = "resell
                   <Label htmlFor="tb-description">Descrizione beni</Label>
                   <Textarea id="tb-description" rows={2} required maxLength={25} data-testid="shipment-description-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Documenti, abbigliamento, ricambi…" />
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="tb-pickup-date">Data ritiro</Label>
-                    <Input id="tb-pickup-date" type="date" required min={nextPickupDate()} data-testid="shipment-pickup-date-input" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border bg-white px-3 py-2.5">
+                  <Checkbox
+                    data-testid="shipment-pickup-at-sender-checkbox"
+                    checked={pickupAtSender}
+                    onCheckedChange={(v) => setPickupAtSender(!!v)}
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-navy">Ritiro presso il mittente</span>
+                    <span className="block text-xs text-muted-foreground">Prenota il ritiro all'indirizzo del mittente nella data e fascia scelte.</span>
+                  </span>
+                </label>
+                {pickupAtSender && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="tb-pickup-date">Data ritiro</Label>
+                      <Input id="tb-pickup-date" type="date" required min={nextPickupDate()} data-testid="shipment-pickup-date-input" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Fascia oraria</Label>
+                      <Select value={pickupSlot} onValueChange={(v: string) => setPickupSlot(v as typeof pickupSlot)}>
+                        <SelectTrigger data-testid="shipment-pickup-slot-select" className="h-10 w-full">
+                          <SelectValue>{(v) => v}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="9-12">9:00 - 12:00</SelectItem>
+                          <SelectItem value="12-15">12:00 - 15:00</SelectItem>
+                          <SelectItem value="15-18">15:00 - 18:00</SelectItem>
+                          <SelectItem value="18-21">18:00 - 21:00</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Fascia oraria</Label>
-                    <Select value={pickupSlot} onValueChange={(v: string) => setPickupSlot(v as typeof pickupSlot)}>
-                      <SelectTrigger data-testid="shipment-pickup-slot-select" className="h-10 w-full">
-                        <SelectValue>{(v) => v}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="9-12">9:00 - 12:00</SelectItem>
-                        <SelectItem value="12-15">12:00 - 15:00</SelectItem>
-                        <SelectItem value="15-18">15:00 - 18:00</SelectItem>
-                        <SelectItem value="18-21">18:00 - 21:00</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                )}
               </div>
               <p className="rounded-xl bg-brand-soft px-3 py-2 text-xs text-brand">
                 Verrà creata sul portale TravelBox e messa nel carrello. Nessun pagamento automatico.

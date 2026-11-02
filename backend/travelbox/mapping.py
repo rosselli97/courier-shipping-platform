@@ -64,7 +64,7 @@ DETAIL_TEXT_PATTERNS: dict[str, str] = {
     # Almeno una cifra: evita di catturare il testo UI "Modifica".
     "tracking_number": r"Tracking della spedizione:\s*(?=[A-Za-z0-9]*\d)([A-Za-z0-9]{6,})",
     "price": r"Costo spedizione:\s*(€\s*[\d.,]+)",
-    "pickup_date": r"Data ritiro:\s*(\d{2}/\d{2}/\d{4})",
+    "pickup_date": r"(?:Data ritiro:|presso il mittente in data)\s*(\d{2}/\d{2}/\d{4})",
     "pickup_code": r"Codice ritiro:\s*([^\s]+(?:\s+-\s+\S+)?)",
 }
 

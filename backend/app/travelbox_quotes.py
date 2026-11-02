@@ -491,6 +491,7 @@ def create_travelbox_shipment(
     description: str | None = None,
     pickup_date: str | None = None,
     pickup_slot: str | None = None,
+    pickup_at_sender: bool = False,
     confirm: bool = True,
 ):
     if not TRAVELBOX_QUOTES_ENABLED or not _settings.userid or not _settings.password:
@@ -547,7 +548,7 @@ def create_travelbox_shipment(
     )
     try:
         with _client_lock:
-            result = client.create_shipment(draft, offer_id, confirm)
+            result = client.create_shipment(draft, offer_id, confirm, pickup_at_sender)
     except Exception:
         if created_recipient:
             with _client_lock:

@@ -733,6 +733,7 @@ class TravelBoxClient:
         draft: ShipmentDraft,
         offer_id: str | None = None,
         confirm: bool = False,
+        pickup_at_sender: bool = False,
     ) -> CreateShipmentResult:
         """Crea la spedizione in due fasi.
 
@@ -846,6 +847,33 @@ class TravelBoxClient:
             value = str(fields.get(name) or "").strip()
             if value:
                 fields[name] = value[:limit]
+
+        if pickup_at_sender:
+            controls = parsers.describe_booking_form(preview.text).get("controls", [])
+            service_value = next(
+                (
+                    str(control.get("value") or "0.00")
+                    for control in controls
+                    if control.get("name") == "serviziAggiuntivi[1]"
+                ),
+                "0.00",
+            )
+            fields["serviziAggiuntivi[1]"] = service_value or "0.00"
+            fields["valore_1"] = fields.get("valore_1") or "0"
+            fields["ritiro_presso"] = "mittente"
+            fields["ritiro_presso_mittente_hidden"] = "1"
+            fields["indirizzo_ritiro"] = draft.sender_street or fields.get("indirizzo_ritiro") or ""
+            fields["cap_ritiro"] = draft.sender_cap or ""
+            fields["citta_ritiro"] = draft.sender_city or ""
+            fields["provincia_ritiro"] = draft.sender_province or ""
+            fields["cod_provincia_ritiro"] = draft.sender_province or ""
+            fields["nazione_ritiro"] = "Italia"
+            fields["cod_nazione_ritiro"] = "IT"
+            fields["telefono_ritiro"] = draft.sender_phone or ""
+            fields["email_ritiro"] = draft.sender_email or ""
+            fields["mobile_ritiro"] = draft.sender_phone or ""
+            fields["ragione_sociale_ritiro"] = draft.sender_name or ""
+            fields["nome_completo_ritiro"] = draft.sender_name or ""
 
         # Il form preseleziona `bonifico`: lo sostituiamo SEMPRE con carrello.
         # Nessun endpoint di pagamento viene chiamato da questo connettore.

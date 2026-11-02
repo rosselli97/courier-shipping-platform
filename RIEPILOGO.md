@@ -95,6 +95,8 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - Aggiunta la colonna `shipments.label_token` con migrazione automatica all'avvio (Postgres/SQLite).
 - Sync produzione eseguito: 104 spedizioni TBC locali, 3 eliminate perché rimosse dal carrello, 101 con etichetta TravelBox scaricabile.
 
+- Nel dialog di creazione è presente il checkbox **Ritiro presso il mittente**: se selezionato, il connettore invia `serviziAggiuntivi[1]`, `ritiro_presso=mittente`, `ritiro_presso_mittente_hidden=1` e i dati del mittente nei campi di ritiro, così TravelBox prenota il ritiro all'indirizzo del mittente.
+
 ### Cosa vuole TravelBox per creare la spedizione
 
 - **Mittente**: `mittente[id]` **numerico** della rubrica, più `cognomenome`, `indirizzo`, `email` (obbligatoria), `telefono` (min. 8 cifre), `contatto`; `codice_fiscale`/`partita_iva` opzionali.

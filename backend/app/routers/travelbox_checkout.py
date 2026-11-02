@@ -90,6 +90,7 @@ def checkout(
             body.description,
             body.pickup_date,
             body.pickup_slot,
+            body.pickup_at_sender,
             body.confirm,
         )
     except AuthError as exc:
