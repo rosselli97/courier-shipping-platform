@@ -1,19 +1,35 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Receipt, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { AlertTriangle, CheckCircle2, Loader2, Receipt, Search } from "lucide-react";
 import { toast } from "sonner";
 import DashboardShell from "@/components/DashboardShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { eur, errorMessage } from "@/lib/format";
-import type { AdminChargeResult } from "@/lib/types";
+import type { AdminChargeResult, ShipmentSearchResponse, ShipmentSearchResult } from "@/lib/types";
 
 export default function AdminCharges() {
   const [code, setCode] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [open, setOpen] = useState(false);
+  const [lookup, setLookup] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLookup(code.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [code]);
+
+  const suggestions = useQuery({
+    queryKey: ["admin", "shipment-search", lookup, "local"],
+    queryFn: () => apiGet<ShipmentSearchResponse>(`/admin/shipment-search?q=${encodeURIComponent(lookup)}&local_only=true`),
+    enabled: lookup.length >= 2,
+    staleTime: 30_000,
+    retry: false,
+  });
+  const localSuggestions = (suggestions.data?.results ?? []).filter((item) => item.local);
 
   const charge = useMutation({
     mutationFn: () =>
@@ -29,6 +45,12 @@ export default function AdminCharges() {
   });
 
   const result = charge.data;
+
+  const selectShipment = (item: ShipmentSearchResult) => {
+    setCode(item.reference || item.tracking_code || item.tracking_number || "");
+    setOpen(false);
+    charge.reset();
+  };
 
   return (
     <DashboardShell
@@ -52,12 +74,43 @@ export default function AdminCharges() {
                 id="charge-code"
                 data-testid="charge-code-input"
                 value={code}
-                onChange={(e) => { setCode(e.target.value); charge.reset(); }}
+                onChange={(e) => { setCode(e.target.value); setOpen(true); charge.reset(); }}
+                onFocus={() => setOpen(true)}
+                onBlur={() => setTimeout(() => setOpen(false), 150)}
                 placeholder="Es. MVP20260001 oppure TBC-40226"
                 className="h-12 pl-9 font-mono"
                 required
                 minLength={2}
               />
+              {open && lookup.length >= 2 && (
+                <div data-testid="charge-suggestions" className="absolute left-0 right-0 top-full z-40 mt-1 max-h-64 overflow-auto rounded-xl border bg-white shadow-lg">
+                  {suggestions.isFetching ? (
+                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin" /> Ricerca spedizione...
+                    </div>
+                  ) : localSuggestions.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-muted-foreground">Nessuna spedizione MUVPACK trovata.</p>
+                  ) : (
+                    localSuggestions.map((item) => (
+                      <button
+                        key={item.local_id ?? item.reference ?? item.tracking_code}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => selectShipment(item)}
+                        className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted"
+                      >
+                        <span className="flex w-full items-center justify-between gap-2">
+                          <span className="font-mono font-semibold text-navy">{item.reference || item.tracking_code}</span>
+                          <span className="text-xs text-muted-foreground">{item.status}</span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {[item.recipient_name, item.origin_city && item.dest_city ? `${item.origin_city} → ${item.dest_city}` : null].filter(Boolean).join(" · ") || "Dettagli non disponibili"}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">Il sistema cerca la spedizione in MUVPACK e, se serve, su TravelBox.</p>
           </div>

@@ -97,6 +97,7 @@ def _travelbox_results(term: str, local_refs: set[str], limit: int = 8) -> list[
 @router.get("/shipment-search", response_model=ShipmentSearchResponse)
 def search_shipments(
     q: str = Query(..., min_length=2),
+    local_only: bool = Query(False),
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
@@ -126,6 +127,8 @@ def search_shipments(
     local_refs = {(shipment.tracking_code or "").upper() for shipment in local_rows}
 
     notice = None
+    if local_only:
+        return ShipmentSearchResponse(results=results, notice=None)
     try:
         remote_results = _travelbox_results(term, local_refs)
         remote_refs = [(item.reference or "").upper() for item in remote_results if item.reference]
