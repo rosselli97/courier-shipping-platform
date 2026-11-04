@@ -188,6 +188,21 @@ class ResellerSummary(BaseModel):
     monthly: list[MonthStat]
 
 
+class ResellerProfile(BaseModel):
+    id: str
+    email: str
+    company_name: str
+    vat_number: str
+    contact_name: str | None
+    phone: str | None
+    address: str | None
+    wallet_balance: float
+    status: AccountStatus
+    created_at: str
+    shipments: int
+    revenue: float
+
+
 class AdminMonth(BaseModel):
     month: str
     revenue: float

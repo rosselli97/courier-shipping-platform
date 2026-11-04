@@ -5,14 +5,13 @@ import { toast } from "sonner";
 import { motion } from "motion/react";
 import { CreditCard, History, Loader2, PackageCheck, Plus, Truck, Wallet } from "lucide-react";
 import WalletHistorySheet from "@/components/WalletHistorySheet";
-import ShipmentsTable from "@/components/ShipmentsTable";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import DashboardShell from "@/components/DashboardShell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiGet, apiPost } from "@/lib/api";
 import { errorMessage, eur, monthLabel } from "@/lib/format";
-import type { CheckoutResponse, PaymentStatus, ResellerShipment, ResellerSummary, TopUpPackage } from "@/lib/types";
+import type { CheckoutResponse, PaymentStatus, ResellerSummary, TopUpPackage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const PACKAGES: TopUpPackage[] = ["50", "100", "250", "500"];
@@ -89,12 +88,6 @@ export default function ResellerDashboard() {
   const confirming = usePaymentReturn();
 
   const summary = useQuery({ queryKey: ["reseller", "summary"], queryFn: () => apiGet<ResellerSummary>("/reseller/summary") });
-  const shipments = useQuery({
-    queryKey: ["reseller", "shipments"],
-    queryFn: () => apiGet<ResellerShipment[]>("/reseller/shipments"),
-    // refresh briefly while a recipient email is still being sent
-    refetchInterval: (q) => (q.state.data?.some((s) => s.email_status === "pending") ? 3000 : false),
-  });
 
   const checkout = useMutation({
     mutationFn: (p: TopUpPackage) =>
@@ -174,16 +167,6 @@ export default function ResellerDashboard() {
           </ResponsiveContainer>
         </div>
       </section>
-
-      <div className="mt-6">
-        <ShipmentsTable
-          title="Le tue spedizioni"
-          data={shipments.isError ? undefined : shipments.data}
-          isPending={shipments.isPending}
-          labelBase="/reseller"
-          tid="reseller"
-        />
-      </div>
 
       <WalletHistorySheet open={historyOpen} onOpenChange={setHistoryOpen} />
 
