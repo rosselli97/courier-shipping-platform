@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Bell, BookUser, ChevronDown, ChevronLeft, ChevronRight, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Receipt, Search, ShieldCheck, Tags, UserRound, Users } from "lucide-react";
+import { Bell, BookUser, ChevronDown, ChevronLeft, ChevronRight, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Receipt, Search, ShieldCheck, Tags, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BrandLogo, Chevrons } from "@/components/brand";
 import NotificationBell from "@/components/NotificationBell";
@@ -92,7 +92,7 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
     ? ADMIN_NAV
     : [
         { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
-        { to: "/dashboard/profilo", label: "Profilo", icon: UserRound, testId: "nav-profile" },
+        { to: "/dashboard/spedizioni", label: "Spedizioni effettuate", icon: Package, testId: "nav-reseller-shipments" },
         { to: "/notifiche", label: "Notifiche", icon: Bell, testId: "nav-notifications" },
         { to: "/", label: "Nuova spedizione", icon: Calculator, testId: "nav-new-shipment" },
         { to: "/dashboard/rubrica", label: "Rubrica", icon: BookUser, testId: "nav-contacts" },

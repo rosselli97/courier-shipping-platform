@@ -6,7 +6,7 @@ import Tracking from "@/pages/Tracking";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import ResellerDashboard from "@/pages/ResellerDashboard";
-import ResellerProfile from "@/pages/ResellerProfile";
+import ResellerShipments from "@/pages/ResellerShipments";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminNewShipment from "@/pages/AdminNewShipment";
 import AdminShipments from "@/pages/AdminShipments";
@@ -33,7 +33,7 @@ export default function App() {
         <Route path="/registrati" element={<Signup />} />
         <Route path="/notifiche" element={<RequireRole role="reseller"><Notifications /></RequireRole>} />
         <Route path="/dashboard" element={<RequireRole role="reseller"><ResellerDashboard /></RequireRole>} />
-        <Route path="/dashboard/profilo" element={<RequireRole role="reseller"><ResellerProfile /></RequireRole>} />
+        <Route path="/dashboard/spedizioni" element={<RequireRole role="reseller"><ResellerShipments /></RequireRole>} />
         <Route path="/admin" element={<RequireRole role="admin"><AdminDashboard /></RequireRole>} />
         <Route path="/admin/nuova-spedizione" element={<RequireRole role="admin"><AdminNewShipment /></RequireRole>} />
         <Route path="/dashboard/rubrica" element={<RequireRole role="reseller"><AddressBook role="reseller" /></RequireRole>} />

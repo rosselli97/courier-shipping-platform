@@ -8,7 +8,6 @@ from .schemas import (
     ClientRow,
     ContactOut,
     NotificationOut,
-    ResellerProfile,
     ResellerShipment,
     TicketDetail,
     TicketMessageOut,
@@ -106,23 +105,6 @@ def admin_notification_out(
         recipient_name=recipient.company_name if recipient else "",
         recipient_email=recipient.email if recipient else "",
         recipient_role=recipient.role if recipient else "reseller",  # type: ignore[arg-type]
-    )
-
-
-def reseller_profile(user: User, shipments: int, revenue: float) -> ResellerProfile:
-    return ResellerProfile(
-        id=user.id,
-        email=user.email,
-        company_name=user.company_name,
-        vat_number=user.vat_number,
-        contact_name=user.contact_name,
-        phone=user.phone,
-        address=user.address,
-        wallet_balance=round(user.wallet_balance, 2),
-        status=user.status,  # type: ignore[arg-type]
-        created_at=iso(user.created_at),
-        shipments=shipments,
-        revenue=round(revenue, 2),
     )
 
 

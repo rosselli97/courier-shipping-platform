@@ -163,21 +163,6 @@ export interface ResellerSummary {
   monthly: MonthStat[];
 }
 
-export interface ResellerProfile {
-  id: string;
-  email: string;
-  company_name: string;
-  vat_number: string;
-  contact_name: string | null;
-  phone: string | null;
-  address: string | null;
-  wallet_balance: number;
-  status: "active" | "suspended";
-  created_at: string;
-  shipments: number;
-  revenue: number;
-}
-
 export interface MarkupRule {
   courier: CourierId;
   type: MarkupType;

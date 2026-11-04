@@ -11,8 +11,8 @@ from ..database import get_db
 from ..deps import require_active_reseller, require_reseller
 from ..models import Shipment, User, WalletTx
 from ..pdfs import labels_pdf, month_bounds, statement_pdf, statement_xlsx
-from ..schemas import MonthStat, ResellerProfile, ResellerShipment, ResellerSummary, ShipmentCreate, WalletTxOut
-from ..serializers import reseller_profile, shipment_out, wallet_tx_out
+from ..schemas import MonthStat, ResellerShipment, ResellerSummary, ShipmentCreate, WalletTxOut
+from ..serializers import shipment_out, wallet_tx_out
 from ..shipments import (
     advance_tracking,
     create_shipment,
@@ -45,16 +45,6 @@ def _own_shipment(db: Session, shipment_id: str, user: User) -> Shipment:
 
 def _month_key(value: datetime) -> str:
     return value.strftime("%Y-%m")
-
-
-@router.get("/profile", response_model=ResellerProfile)
-def profile(user: User = Depends(require_reseller), db: Session = Depends(get_db)):
-    shipments = _own_shipments(db, user)
-    return reseller_profile(
-        user,
-        shipments=len(shipments),
-        revenue=sum(shipment.price for shipment in shipments),
-    )
 
 
 @router.get("/summary", response_model=ResellerSummary)
