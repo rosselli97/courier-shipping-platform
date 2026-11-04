@@ -138,6 +138,7 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - **Conto super admin**: nel Centro di controllo c'è il saldo del conto admin con ricarica manuale (`GET/POST /api/admin/wallet`).
 - **Ricerca globale spedizioni** nell'area admin: barra nel header e pagina `/admin/cerca`. Cerca per codice MUVPACK, riferimento TravelBox, tracking o nome e restituisce risultati da MUVPACK e TravelBox, con link al tracking e al portale.
 - **Addebiti manuali** (`/admin/addebiti`): inserisci codice o tracking e importo; il sistema trova il profilo proprietario della spedizione e scala l'importo dal saldo, anche portandolo in negativo. Ogni addebito genera un movimento `admin_adjust`.
+- **Sidebar comprimibile** per admin e rivenditori: un pulsante la chiude lasciando solo le icone e una striscia blu più stretta; lo stato viene ricordato nel browser.
 ## 7. Account demo
 
 | Ruolo | Email | Password |

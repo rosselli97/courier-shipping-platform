@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { BookUser, ChevronDown, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Receipt, Search, ShieldCheck, Tags, Users } from "lucide-react";
+import { BookUser, ChevronDown, ChevronLeft, ChevronRight, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Receipt, Search, ShieldCheck, Tags, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { BrandLogo } from "@/components/brand";
+import { BrandLogo, Chevrons } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMe } from "@/lib/auth";
@@ -79,6 +79,13 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
   const loc = useLocation();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("muvpack.sidebar.collapsed") === "1";
+  });
+  useEffect(() => {
+    window.localStorage.setItem("muvpack.sidebar.collapsed", collapsed ? "1" : "0");
+  }, [collapsed]);
   const nav: NavItem[] = role === "admin"
     ? ADMIN_NAV
     : [
@@ -88,29 +95,58 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
         { to: "/dashboard/assistenza", label: "Assistenza", icon: LifeBuoy, testId: "nav-support" },
       ];
   return (
-    <div className="min-h-screen bg-page lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-navy-dark text-white lg:flex">
-        <div className="px-6 py-7"><BrandLogo variant="white" className="h-5" /></div>
-        <p className="px-6 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-          {role === "admin" ? "Super Admin" : "Area Rivenditori"}
-        </p>
-        <nav className="mt-3 space-y-1 px-3">
+    <div className={cn("min-h-screen bg-page transition-[padding] duration-200", collapsed ? "lg:pl-20" : "lg:pl-64")}>
+      <aside
+        data-collapsed={collapsed}
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 hidden flex-col bg-navy-dark text-white transition-[width] duration-200 lg:flex",
+          collapsed ? "w-20" : "w-64",
+        )}
+      >
+        <button
+          type="button"
+          data-testid="sidebar-toggle-button"
+          aria-label={collapsed ? "Espandi menu laterale" : "Comprimi menu laterale"}
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed((value) => !value)}
+          className="absolute -right-3 top-6 z-40 hidden size-6 place-items-center rounded-full border bg-white text-navy shadow-sm transition-colors hover:bg-brand-soft lg:grid"
+        >
+          {collapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
+        </button>
+        <div className={cn("py-7", collapsed ? "flex justify-center px-2" : "px-6")}>
+          {collapsed ? (
+            <Link to="/" title="MUVPACK" data-testid="brand-logo-link" className="grid size-10 place-items-center rounded-xl bg-brand/20 text-brand">
+              <Chevrons className="h-4 w-8" />
+            </Link>
+          ) : (
+            <BrandLogo variant="white" className="h-5" />
+          )}
+        </div>
+        {!collapsed && (
+          <p className="px-6 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+            {role === "admin" ? "Super Admin" : "Area Rivenditori"}
+          </p>
+        )}
+        <nav className={cn("mt-3 space-y-1", collapsed ? "px-2" : "px-3")}>
           {nav.map((n) => (
             <Link
               key={n.to}
               to={n.to}
               data-testid={n.testId}
+              title={collapsed ? n.label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center rounded-lg text-sm font-medium transition-colors",
+                collapsed ? "justify-center px-0 py-3" : "gap-3 px-3 py-2.5",
                 loc.pathname === n.to ? "bg-white/10 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white",
               )}
             >
-              <n.icon className={cn("size-4", loc.pathname === n.to && "text-brand")} /> {n.label}
+              <n.icon className={cn("size-4", loc.pathname === n.to && "text-brand")} />
+              {!collapsed && <span>{n.label}</span>}
             </Link>
           ))}
         </nav>
         <div className="mt-auto">
-          {role === "reseller" && (
+          {!collapsed && role === "reseller" && (
             <div data-testid="shell-help-card" className="mx-3 mb-3 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
               <div className="flex items-center gap-3">
                 <span className="grid size-9 place-items-center rounded-xl bg-brand/20 text-brand">
@@ -124,15 +160,23 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
               </Link>
             </div>
           )}
-          <div className="border-t border-white/10 p-4">
-            <p data-testid="shell-user-company" className="truncate text-sm font-semibold">{me.data?.company_name}</p>
-            <p className="truncate text-xs text-slate-400">{me.data?.email}</p>
+          <div className={cn("border-t border-white/10", collapsed ? "p-2" : "p-4")}>
+            {!collapsed && (
+              <>
+                <p data-testid="shell-user-company" className="truncate text-sm font-semibold">{me.data?.company_name}</p>
+                <p className="truncate text-xs text-slate-400">{me.data?.email}</p>
+              </>
+            )}
             <button
               data-testid="logout-button"
+              title={collapsed ? "Esci" : undefined}
               onClick={() => void endSession()}
-              className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+              className={cn(
+                "flex items-center rounded-lg text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white",
+                collapsed ? "mx-auto justify-center px-0 py-2.5" : "mt-3 w-full gap-2 px-3 py-2",
+              )}
             >
-              <LogOut className="size-4" /> Esci
+              <LogOut className="size-4" /> {!collapsed && "Esci"}
             </button>
           </div>
         </div>
