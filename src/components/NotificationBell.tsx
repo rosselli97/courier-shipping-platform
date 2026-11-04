@@ -14,6 +14,7 @@ export default function NotificationBell({ className }: { className?: string }) 
 
   const items = notifications.data?.items ?? [];
   const unread = notifications.data?.unread ?? 0;
+  const target = me.data?.role === "admin" ? "/admin/notifiche" : "/notifiche";
 
   return (
     <DropdownMenu>
@@ -44,7 +45,7 @@ export default function NotificationBell({ className }: { className?: string }) 
           <button
             type="button"
             data-testid="notification-see-all"
-            onClick={() => navigate("/notifiche")}
+            onClick={() => navigate(target)}
             className="text-xs font-semibold text-brand transition-colors hover:text-brand-hover"
           >
             Vedi tutte
@@ -65,7 +66,7 @@ export default function NotificationBell({ className }: { className?: string }) 
                 data-testid={`notification-item-${item.id}`}
                 onClick={() => {
                   if (!item.read_at) markRead.mutate(item.id);
-                  navigate(`/notifiche?focus=${encodeURIComponent(item.id)}`);
+                  navigate(`${target}?focus=${encodeURIComponent(item.id)}`);
                 }}
                 className={cn(
                   "flex cursor-pointer flex-col items-start gap-1 rounded-lg px-3 py-2.5",
@@ -94,15 +95,6 @@ export default function NotificationBell({ className }: { className?: string }) 
             className="justify-center text-xs font-semibold text-brand"
           >
             Segna tutte come lette
-          </DropdownMenuItem>
-        )}
-        {me.data?.role === "admin" && (
-          <DropdownMenuItem
-            data-testid="notification-manage-link"
-            onClick={() => navigate("/admin/notifiche")}
-            className="justify-center text-xs font-semibold text-navy"
-          >
-            Gestisci notifiche
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>

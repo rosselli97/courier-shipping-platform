@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCheck, Inbox, Loader2, Send, Users } from "lucide-react";
+import { Bell, CheckCheck, Loader2, Send, Users } from "lucide-react";
 import { toast } from "sonner";
 import DashboardShell from "@/components/DashboardShell";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,6 +30,9 @@ const AUDIENCE_LABEL: Record<NotificationAudience, string> = {
 
 export default function AdminNotifications() {
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get("focus");
+  const handledFocus = useRef<string | null>(null);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [audience, setAudience] = useState<NotificationAudience>("all");
@@ -73,20 +76,19 @@ export default function AdminNotifications() {
   const unread = rows.filter((row) => !row.read_at).length;
   const clientsList = clients.data ?? [];
 
+  useEffect(() => {
+    if (!focusId || handledFocus.current === focusId) return;
+    const element = document.getElementById(`admin-notification-${focusId}`);
+    if (!element) return;
+    handledFocus.current = focusId;
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusId, history.data]);
+
   return (
     <DashboardShell
       role="admin"
       title="Gestione notifiche"
       subtitle="Invia comunicazioni ai profili e controlla chi ha letto le notifiche."
-      actions={
-        <Link
-          to="/notifiche"
-          data-testid="admin-notifications-inbox-link"
-          className={cn(buttonVariants({ variant: "outline" }), "h-11 gap-2")}
-        >
-          <Inbox className="size-4" /> Le mie notifiche
-        </Link>
-      }
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,440px)_1fr] xl:items-start">
         <form
@@ -236,7 +238,12 @@ export default function AdminNotifications() {
                 </TableRow>
               )}
               {rows.map((row) => (
-                <TableRow key={row.id} data-testid={`admin-notification-row-${row.id}`} className={cn(!row.read_at && "bg-brand-soft/30")}>
+                <TableRow
+                  key={row.id}
+                  id={`admin-notification-${row.id}`}
+                  data-testid={`admin-notification-row-${row.id}`}
+                  className={cn(!row.read_at && "bg-brand-soft/30", focusId === row.id && "ring-2 ring-inset ring-brand/40")}
+                >
                   <TableCell className="pl-5">
                     <p className="font-semibold text-navy">{row.recipient_name}</p>
                     <p className="text-xs text-muted-foreground">{row.recipient_email}</p>

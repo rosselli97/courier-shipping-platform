@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Bell, CheckCheck, Inbox, Loader2 } from "lucide-react";
 import DashboardShell from "@/components/DashboardShell";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { useMe } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
 import { dateTimeIt } from "@/lib/format";
 import { useNotificationActions, useNotifications } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
 export default function Notifications() {
-  const me = useMe();
-  const role = me.data?.role ?? "reseller";
   const notifications = useNotifications();
   const { markRead, markAll } = useNotificationActions();
   const [searchParams] = useSearchParams();
@@ -33,31 +30,20 @@ export default function Notifications() {
 
   return (
     <DashboardShell
-      role={role}
+      role="reseller"
       title="Notifiche"
       subtitle="Clicca una notifica per aprirla e segnarla come letta."
       actions={
-        <div className="flex flex-wrap gap-2">
-          {role === "admin" && (
-            <Link
-              to="/admin/notifiche"
-              data-testid="notifications-manage-link"
-              className={cn(buttonVariants({ variant: "outline" }), "h-11 gap-2")}
-            >
-              <Bell className="size-4" /> Gestisci notifiche
-            </Link>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            data-testid="notifications-mark-all-button"
-            disabled={unread === 0 || markAll.isPending}
-            onClick={() => markAll.mutate()}
-            className="h-11 gap-2"
-          >
-            <CheckCheck className="size-4" /> Segna tutte come lette
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="outline"
+          data-testid="notifications-mark-all-button"
+          disabled={unread === 0 || markAll.isPending}
+          onClick={() => markAll.mutate()}
+          className="h-11 gap-2"
+        >
+          <CheckCheck className="size-4" /> Segna tutte come lette
+        </Button>
       }
     >
       <section className="rounded-2xl border bg-card shadow-sm">

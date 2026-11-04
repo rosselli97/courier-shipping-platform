@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Bell, BookUser, ChevronDown, ChevronLeft, ChevronRight, Headset, Inbox, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Receipt, Search, ShieldCheck, Tags, Users } from "lucide-react";
+import { Bell, BookUser, ChevronDown, ChevronLeft, ChevronRight, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Receipt, Search, ShieldCheck, Tags, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BrandLogo, Chevrons } from "@/components/brand";
 import NotificationBell from "@/components/NotificationBell";
@@ -9,20 +9,6 @@ import { Input } from "@/components/ui/input";
 import { useMe } from "@/lib/auth";
 import { endSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
-
-export function RequireAuth({ children }: { children: ReactNode }) {
-  const me = useMe();
-  const loc = useLocation();
-  if (me.isPending) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-page" data-testid="auth-loading">
-        <div className="size-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-      </div>
-    );
-  }
-  if (me.isError || !me.data) return <Navigate to={`/login?next=${encodeURIComponent(loc.pathname)}`} replace />;
-  return <>{children}</>;
-}
 
 export function RequireRole({ role, children }: { role: "admin" | "reseller"; children: ReactNode }) {
   const me = useMe();
@@ -43,7 +29,6 @@ interface NavItem { to: string; label: string; icon: typeof Package; testId: str
 
 const ADMIN_NAV: NavItem[] = [
   { to: "/admin", label: "Centro di controllo", icon: ShieldCheck, testId: "nav-admin", hint: "KPI, ricavi e tariffe" },
-  { to: "/notifiche", label: "Le mie notifiche", icon: Inbox, testId: "nav-admin-inbox", hint: "Notifiche ricevute" },
   { to: "/admin/notifiche", label: "Gestione notifiche", icon: Bell, testId: "nav-admin-notifications", hint: "Invia e controlla le notifiche" },
   { to: "/admin/nuova-spedizione", label: "Nuova spedizione", icon: Calculator, testId: "nav-admin-new-shipment", hint: "Spedisci e decidi il ricarico" },
   { to: "/admin/spedizioni", label: "Spedizioni effettuate", icon: Package, testId: "nav-admin-shipments", hint: "Elenco ed etichette PDF" },
