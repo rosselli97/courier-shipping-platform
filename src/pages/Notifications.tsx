@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Bell, CheckCheck, Inbox, Loader2 } from "lucide-react";
 import DashboardShell from "@/components/DashboardShell";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -13,10 +13,23 @@ export default function Notifications() {
   const role = me.data?.role ?? "reseller";
   const notifications = useNotifications();
   const { markRead, markAll } = useNotificationActions();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get("focus");
+  const handledFocus = useRef<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(focusId);
 
   const items = notifications.data?.items ?? [];
   const unread = notifications.data?.unread ?? 0;
+
+  useEffect(() => {
+    if (!focusId || handledFocus.current === focusId) return;
+    const item = items.find((entry) => entry.id === focusId);
+    if (!item) return;
+    handledFocus.current = focusId;
+    setSelectedId(focusId);
+    if (!item.read_at) markRead.mutate(focusId);
+    document.getElementById(`notification-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusId, items]);
 
   return (
     <DashboardShell
@@ -91,6 +104,7 @@ export default function Notifications() {
             return (
               <button
                 key={item.id}
+                id={`notification-${item.id}`}
                 type="button"
                 data-testid={`notifications-page-item-${item.id}`}
                 onClick={() => {
