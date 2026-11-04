@@ -136,6 +136,7 @@ Connettore non ufficiale incluso in `backend/travelbox/` (client, parser, mappin
 - **Tariffe pallet** spostate dalla dashboard alla sezione **Listini e ricarichi**.
 - **Nuova spedizione admin**: il super admin decide se applicare il ricarico e se percentuale o fisso; il valore scelto sovrascrive per quella spedizione i ricarichi configurati nei listini.
 - **Conto super admin**: nel Centro di controllo c'è il saldo del conto admin con ricarica manuale (`GET/POST /api/admin/wallet`).
+- **Ricerca globale spedizioni** nell'area admin: barra nel header e pagina `/admin/cerca`. Cerca per codice MUVPACK, riferimento TravelBox, tracking o nome e restituisce risultati da MUVPACK e TravelBox, con link al tracking e al portale.
 ## 7. Account demo
 
 | Ruolo | Email | Password |

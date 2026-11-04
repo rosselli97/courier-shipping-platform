@@ -226,6 +226,29 @@ class AdminWalletTopupBody(BaseModel):
     note: str | None = None
 
 
+class ShipmentSearchResult(BaseModel):
+    source: Literal["muvpack", "travelbox"]
+    reference: str | None = None
+    tracking_code: str | None = None
+    tracking_number: str | None = None
+    status: str | None = None
+    carrier: str | None = None
+    sender_name: str | None = None
+    recipient_name: str | None = None
+    origin_city: str | None = None
+    dest_city: str | None = None
+    created_at: str | None = None
+    price: float | None = None
+    local_id: str | None = None
+    local: bool = False
+    portal_url: str | None = None
+
+
+class ShipmentSearchResponse(BaseModel):
+    results: list[ShipmentSearchResult]
+    notice: str | None = None
+
+
 class MarkupRule(BaseModel):
     courier: CourierId
     type: MarkupType

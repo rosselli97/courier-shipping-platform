@@ -246,6 +246,29 @@ export interface AdminWallet {
   transactions: WalletTx[];
 }
 
+export interface ShipmentSearchResult {
+  source: "muvpack" | "travelbox";
+  reference: string | null;
+  tracking_code: string | null;
+  tracking_number: string | null;
+  status: string | null;
+  carrier: string | null;
+  sender_name: string | null;
+  recipient_name: string | null;
+  origin_city: string | null;
+  dest_city: string | null;
+  created_at: string | null;
+  price: number | null;
+  local_id: string | null;
+  local: boolean;
+  portal_url: string | null;
+}
+
+export interface ShipmentSearchResponse {
+  results: ShipmentSearchResult[];
+  notice: string | null;
+}
+
 export interface ClientRow {
   id: string;
   email: string;

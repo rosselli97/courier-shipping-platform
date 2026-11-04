@@ -1,8 +1,10 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { BookUser, ChevronDown, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, ShieldCheck, Tags, Users } from "lucide-react";
+import { BookUser, ChevronDown, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Search, ShieldCheck, Tags, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BrandLogo } from "@/components/brand";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useMe } from "@/lib/auth";
 import { endSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -28,6 +30,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: "/admin", label: "Centro di controllo", icon: ShieldCheck, testId: "nav-admin", hint: "KPI, ricavi e tariffe" },
   { to: "/admin/nuova-spedizione", label: "Nuova spedizione", icon: Calculator, testId: "nav-admin-new-shipment", hint: "Spedisci e decidi il ricarico" },
   { to: "/admin/spedizioni", label: "Spedizioni effettuate", icon: Package, testId: "nav-admin-shipments", hint: "Elenco ed etichette PDF" },
+  { to: "/admin/cerca", label: "Cerca spedizione", icon: Search, testId: "nav-admin-search", hint: "MUVPACK e TravelBox" },
   { to: "/admin/clienti", label: "Clienti B2B", icon: Users, testId: "nav-admin-clients", hint: "Clienti, saldi e stati" },
   { to: "/admin/listini", label: "Listini e ricarichi", icon: Tags, testId: "nav-admin-rate-lists", hint: "Listini TravelBox e margini clienti" },
   { to: "/admin/rubrica", label: "Rubrica destinatari", icon: BookUser, testId: "nav-admin-contacts", hint: "Aggiungi, modifica, elimina" },
@@ -73,6 +76,8 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
 }) {
   const me = useMe();
   const loc = useLocation();
+  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
   const nav: NavItem[] = role === "admin"
     ? ADMIN_NAV
     : [
@@ -144,7 +149,33 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
             <h1 data-testid="page-title" className="font-heading text-3xl font-bold text-navy sm:text-4xl">{title}</h1>
             {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
           </div>
-          {actions}
+          <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
+            {role === "admin" && (
+              <form
+                className="flex w-full items-center gap-2 sm:w-auto"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const value = search.trim();
+                  if (value.length >= 2) navigate(`/admin/cerca?q=${encodeURIComponent(value)}`);
+                }}
+              >
+                <div className="relative w-full sm:w-72">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    data-testid="global-shipment-search-input"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Cerca spedizione..."
+                    className="h-10 pl-9"
+                  />
+                </div>
+                <Button type="submit" data-testid="global-shipment-search-submit" disabled={search.trim().length < 2} className="h-10 bg-navy text-white hover:bg-navy-light">
+                  Cerca
+                </Button>
+              </form>
+            )}
+            {actions}
+          </div>
         </div>
         {children}
       </main>

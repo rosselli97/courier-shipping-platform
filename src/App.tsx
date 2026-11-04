@@ -10,6 +10,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import AdminNewShipment from "@/pages/AdminNewShipment";
 import AdminShipments from "@/pages/AdminShipments";
 import AdminClients from "@/pages/AdminClients";
+import AdminSearch from "@/pages/AdminSearch";
 import AdminRateLists from "@/pages/AdminRateLists";
 import AddressBook from "@/pages/AddressBook";
 import Support from "@/pages/Support";
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/admin/rubrica" element={<RequireRole role="admin"><AddressBook role="admin" /></RequireRole>} />
         <Route path="/admin/spedizioni" element={<RequireRole role="admin"><AdminShipments /></RequireRole>} />
         <Route path="/admin/clienti" element={<RequireRole role="admin"><AdminClients /></RequireRole>} />
+        <Route path="/admin/cerca" element={<RequireRole role="admin"><AdminSearch /></RequireRole>} />
         <Route path="/admin/listini" element={<RequireRole role="admin"><AdminRateLists /></RequireRole>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
