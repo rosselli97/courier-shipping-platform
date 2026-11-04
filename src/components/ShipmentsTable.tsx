@@ -26,9 +26,10 @@ interface Props {
   /** data-testid prefix, e.g. "reseller" or "admin" */
   tid: string;
   priceLabel?: string;
+  allowDelete?: boolean;
 }
 
-export default function ShipmentsTable({ title, data, isPending, labelBase, tid, priceLabel = "Prezzo" }: Props) {
+export default function ShipmentsTable({ title, data, isPending, labelBase, tid, priceLabel = "Prezzo", allowDelete = true }: Props) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -189,7 +190,7 @@ export default function ShipmentsTable({ title, data, isPending, labelBase, tid,
                       <Download className="size-3.5" /> PDF
                     </a>
                   )}
-                  {r.source === "travelbox" && r.status === "creata" && (
+                  {allowDelete && r.source === "travelbox" && r.status === "creata" && (
                     <Button
                       variant="ghost"
                       size="icon-sm"

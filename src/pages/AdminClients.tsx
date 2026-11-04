@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Tags, TrendingUp, Users, Wallet } from "lucide-react";
+import { Plus, Tags, TrendingUp, UserRound, Users, Wallet } from "lucide-react";
 import DashboardShell from "@/components/DashboardShell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +104,13 @@ export default function AdminClients() {
               <TableRow key={c.id} data-testid={`admin-client-row-${c.email}`} className="hover:bg-muted/50">
                 <TableCell className="pl-5">
                   <p className="flex items-center gap-1.5 font-semibold text-navy">
-                    {c.company_name}
+                    <Link
+                      to={`/admin/clienti/${c.id}`}
+                      data-testid={`admin-client-open-${c.email}`}
+                      className="transition-colors hover:text-brand"
+                    >
+                      {c.company_name}
+                    </Link>
                     {c.self_registered && (
                       <span data-testid="admin-client-self-registered-badge" className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-800">
                         Registrato online
@@ -119,7 +125,11 @@ export default function AdminClients() {
                   )}
                 </TableCell>
                 <TableCell className="font-mono text-xs">{c.vat_number}</TableCell>
-                <TableCell className="text-right">{c.shipments}</TableCell>
+                <TableCell className="text-right">
+                  <Link to={`/admin/clienti/${c.id}`} className="font-semibold text-brand hover:underline">
+                    {c.shipments}
+                  </Link>
+                </TableCell>
                 <TableCell className="text-right">{eur(c.revenue)}</TableCell>
                 <TableCell data-testid="admin-client-wallet-value" className="text-right font-semibold text-navy">{eur(c.wallet_balance)}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{dateIt(c.created_at)}</TableCell>
@@ -141,9 +151,18 @@ export default function AdminClients() {
                   </button>
                 </TableCell>
                 <TableCell className="pr-5 text-right">
-                  <Button variant="outline" size="sm" data-testid="admin-client-wallet-adjust-btn" onClick={() => { setWalletFor(c); setWalletAmt("50"); }}>
-                    <Wallet className="size-3.5" /> Saldo
-                  </Button>
+                  <div className="flex justify-end gap-1.5">
+                    <Link
+                      to={`/admin/clienti/${c.id}`}
+                      data-testid={`admin-client-profile-${c.email}`}
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+                    >
+                      <UserRound className="size-3.5" /> Profilo
+                    </Link>
+                    <Button variant="outline" size="sm" data-testid="admin-client-wallet-adjust-btn" onClick={() => { setWalletFor(c); setWalletAmt("50"); }}>
+                      <Wallet className="size-3.5" /> Saldo
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

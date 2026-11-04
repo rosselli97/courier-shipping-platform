@@ -10,6 +10,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import AdminNewShipment from "@/pages/AdminNewShipment";
 import AdminShipments from "@/pages/AdminShipments";
 import AdminClients from "@/pages/AdminClients";
+import AdminClientDetail from "@/pages/AdminClientDetail";
 import AdminSearch from "@/pages/AdminSearch";
 import AdminCharges from "@/pages/AdminCharges";
 import AdminNotifications from "@/pages/AdminNotifications";
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/admin/rubrica" element={<RequireRole role="admin"><AddressBook role="admin" /></RequireRole>} />
         <Route path="/admin/spedizioni" element={<RequireRole role="admin"><AdminShipments /></RequireRole>} />
         <Route path="/admin/clienti" element={<RequireRole role="admin"><AdminClients /></RequireRole>} />
+        <Route path="/admin/clienti/:clientId" element={<RequireRole role="admin"><AdminClientDetail /></RequireRole>} />
         <Route path="/admin/cerca" element={<RequireRole role="admin"><AdminSearch /></RequireRole>} />
         <Route path="/admin/notifiche" element={<RequireRole role="admin"><AdminNotifications /></RequireRole>} />
         <Route path="/admin/addebiti" element={<RequireRole role="admin"><AdminCharges /></RequireRole>} />

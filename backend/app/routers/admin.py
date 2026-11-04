@@ -375,6 +375,34 @@ def _get_client(db: Session, client_id: str) -> User:
     return user
 
 
+@router.get("/clients/{client_id}", response_model=ClientRow)
+def client_detail(
+    client_id: str, _: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    return _client_row(db, _get_client(db, client_id))
+
+
+@router.get("/clients/{client_id}/shipments", response_model=list[ResellerShipment])
+def client_shipments(
+    client_id: str, _: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    client = _get_client(db, client_id)
+    try:
+        sync_travelbox_shipments(db)
+    except Exception:
+        logger.exception("TravelBox sync non riuscito")
+    rows = list(
+        db.scalars(
+            select(Shipment)
+            .where(Shipment.owner_id == client.id, Shipment.is_admin_shipment.is_(False))
+            .order_by(Shipment.created_at.desc())
+        )
+    )
+    for shipment in rows:
+        advance_tracking(db, shipment)
+    return [shipment_out(s) for s in rows]
+
+
 @router.get("/clients/{client_id}/markup", response_model=ClientMarkup)
 def get_client_markup(client_id: str, _: User = Depends(require_admin), db: Session = Depends(get_db)):
     _get_client(db, client_id)
@@ -465,6 +493,13 @@ def _admin_shipment(db: Session, shipment_id: str) -> Shipment:
     return shipment
 
 
+def _get_shipment(db: Session, shipment_id: str) -> Shipment:
+    shipment = db.get(Shipment, shipment_id)
+    if shipment is None:
+        raise HTTPException(status_code=404, detail="Spedizione non trovata")
+    return shipment
+
+
 @router.get("/shipments", response_model=list[ResellerShipment])
 def admin_shipments(_: User = Depends(require_admin), db: Session = Depends(get_db)):
     try:
@@ -515,7 +550,7 @@ def delete_admin_shipment(
 
 @router.get("/shipments/{shipment_id}/label")
 def admin_label(shipment_id: str, _: User = Depends(require_admin), db: Session = Depends(get_db)):
-    shipment = _admin_shipment(db, shipment_id)
+    shipment = _get_shipment(db, shipment_id)
     if is_travelbox_shipment(shipment):
         content, media_type, filename = travelbox_label(db, shipment)
         return Response(
@@ -536,7 +571,7 @@ def admin_labels(ids: str = Query(...), _: User = Depends(require_admin), db: Se
     shipments = [
         s
         for s in (db.get(Shipment, part) for part in wanted)
-        if s is not None and s.is_admin_shipment and not is_travelbox_shipment(s)
+        if s is not None and not is_travelbox_shipment(s)
     ]
     if not shipments:
         raise HTTPException(status_code=404, detail="Nessuna etichetta trovata")
