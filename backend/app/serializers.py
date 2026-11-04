@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from .models import Contact, Shipment, Ticket, User, WalletTx
+from .models import Contact, Notification, Shipment, Ticket, User, WalletTx
 from .schemas import (
+    AdminNotificationOut,
     ClientRow,
     ContactOut,
+    NotificationOut,
     ResellerShipment,
     TicketDetail,
     TicketMessageOut,
@@ -79,6 +81,30 @@ def contact_out(contact: Contact) -> ContactOut:
         email=contact.email,
         uses=contact.uses,
         last_used_at=iso(contact.last_used_at),
+    )
+
+
+def notification_out(notification: Notification, sender_name: str | None = None) -> NotificationOut:
+    return NotificationOut(
+        id=notification.id,
+        title=notification.title,
+        body=notification.body,
+        created_at=iso(notification.created_at),
+        read_at=iso(notification.read_at) if notification.read_at else None,
+        sender_name=sender_name,
+    )
+
+
+def admin_notification_out(
+    notification: Notification, recipient: User | None, sender_name: str | None = None
+) -> AdminNotificationOut:
+    base = notification_out(notification, sender_name)
+    return AdminNotificationOut(
+        **base.model_dump(),
+        recipient_id=notification.user_id,
+        recipient_name=recipient.company_name if recipient else "",
+        recipient_email=recipient.email if recipient else "",
+        recipient_role=recipient.role if recipient else "reseller",  # type: ignore[arg-type]
     )
 
 

@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { BookUser, ChevronDown, ChevronLeft, ChevronRight, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Receipt, Search, ShieldCheck, Tags, Users } from "lucide-react";
+import { Bell, BookUser, ChevronDown, ChevronLeft, ChevronRight, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Receipt, Search, ShieldCheck, Tags, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BrandLogo, Chevrons } from "@/components/brand";
+import NotificationBell from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMe } from "@/lib/auth";
@@ -28,6 +29,7 @@ interface NavItem { to: string; label: string; icon: typeof Package; testId: str
 
 const ADMIN_NAV: NavItem[] = [
   { to: "/admin", label: "Centro di controllo", icon: ShieldCheck, testId: "nav-admin", hint: "KPI, ricavi e tariffe" },
+  { to: "/admin/notifiche", label: "Notifiche", icon: Bell, testId: "nav-admin-notifications", hint: "Invia e controlla le notifiche" },
   { to: "/admin/nuova-spedizione", label: "Nuova spedizione", icon: Calculator, testId: "nav-admin-new-shipment", hint: "Spedisci e decidi il ricarico" },
   { to: "/admin/spedizioni", label: "Spedizioni effettuate", icon: Package, testId: "nav-admin-shipments", hint: "Elenco ed etichette PDF" },
   { to: "/admin/cerca", label: "Cerca spedizione", icon: Search, testId: "nav-admin-search", hint: "MUVPACK e TravelBox" },
@@ -183,9 +185,12 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
       </aside>
       <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-white/80 px-4 py-3 backdrop-blur lg:hidden">
         <BrandLogo className="h-5" />
-        <button data-testid="logout-button-mobile" onClick={() => void endSession()} className="text-sm font-medium text-navy">
-          Esci
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell className="size-9" />
+          <button data-testid="logout-button-mobile" onClick={() => void endSession()} className="text-sm font-medium text-navy">
+            Esci
+          </button>
+        </div>
       </header>
       <main className="mx-auto max-w-[1400px] px-4 py-8 sm:px-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -195,6 +200,7 @@ export default function DashboardShell({ title, subtitle, actions, children, rol
             {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
           </div>
           <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
+            <NotificationBell />
             {role === "admin" && (
               <form
                 className="flex w-full items-center gap-2 sm:w-auto"

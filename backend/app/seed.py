@@ -10,6 +10,7 @@ from .geo import city_for_cap
 from .models import (
     Contact,
     MarkupRule,
+    Notification,
     PalletRate,
     Shipment,
     Ticket,
@@ -268,6 +269,26 @@ def seed() -> None:
             "Avrei bisogno della fattura relativa alla ricarica del portafoglio di ottobre.",
             "answered", now - timedelta(days=4),
             reply="Ciao, trovi la fattura nella sezione Movimenti del portafoglio. L'abbiamo inviata anche via email.",
+        )
+
+        db.add(
+            Notification(
+                user_id=reseller.id,
+                title="Benvenuto su MUVPACK",
+                body="Da qui ricevi aggiornamenti su spedizioni, saldo e comunicazioni del team.",
+                created_by=admin.id,
+                created_at=now - timedelta(hours=6),
+            )
+        )
+        db.add(
+            Notification(
+                user_id=bianchi.id,
+                title="Nuove tariffe disponibili",
+                body="Abbiamo aggiornato i listini corriere: controlla i prezzi nella nuova spedizione.",
+                created_by=admin.id,
+                read_at=now - timedelta(hours=2),
+                created_at=now - timedelta(days=1),
+            )
         )
 
         db.commit()

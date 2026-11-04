@@ -489,6 +489,46 @@ class TicketStatusBody(BaseModel):
     status: TicketStatus
 
 
+class NotificationOut(BaseModel):
+    id: str
+    title: str
+    body: str
+    created_at: str
+    read_at: str | None = None
+    sender_name: str | None = None
+
+
+class NotificationList(BaseModel):
+    items: list[NotificationOut]
+    unread: int
+
+
+class AdminNotificationOut(NotificationOut):
+    recipient_id: str
+    recipient_name: str
+    recipient_email: str
+    recipient_role: Role
+
+
+class NotificationSendBody(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    body: str = Field(min_length=1, max_length=2000)
+    audience: Literal["all", "resellers", "selected"] = "all"
+    recipient_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("title", "body")
+    @classmethod
+    def _not_blank(cls, value: str) -> str:
+        value = (value or "").strip()
+        if not value:
+            raise ValueError("must not be empty")
+        return value
+
+
+class NotificationSendResult(BaseModel):
+    created: int
+
+
 class TravelBoxCheckoutRequest(QuoteRequest):
     offer_id: str = Field(min_length=1)
     recipient_name: str = Field(min_length=2)

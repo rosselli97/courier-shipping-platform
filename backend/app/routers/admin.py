@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import notifications as notifications_service
 from ..database import get_db
 from ..deps import require_admin
 from ..models import MarkupRule, PalletRate, Shipment, User, WalletTx, new_id
@@ -24,9 +25,12 @@ from ..schemas import (
     AdminMonth,
     AdminChargeBody,
     AdminChargeResponse,
+    AdminNotificationOut,
     AdminScopeKpis,
     AdminWallet,
     AdminWalletTopupBody,
+    NotificationSendBody,
+    NotificationSendResult,
     ClientCreate,
     ClientMarkup,
     ClientMarkupBody,
@@ -138,6 +142,28 @@ def kpis(_: User = Depends(require_admin), db: Session = Depends(get_db)):
         admin=_scope_kpis(admin_shipments),
         clients=_scope_kpis(client_shipments),
     )
+
+
+@router.get("/notifications", response_model=list[AdminNotificationOut])
+def admin_notifications(
+    limit: int = Query(200, ge=1, le=500),
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    return notifications_service.list_all(db, limit=limit)
+
+
+@router.post("/notifications", response_model=NotificationSendResult, status_code=201)
+def send_admin_notification(
+    body: NotificationSendBody,
+    user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        created = notifications_service.send_notifications(db, user, body)
+    except notifications_service.NotificationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return NotificationSendResult(created=created)
 
 
 def _admin_wallet(user: User, db: Session) -> AdminWallet:

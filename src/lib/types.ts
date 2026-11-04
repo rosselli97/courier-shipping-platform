@@ -392,3 +392,37 @@ export interface TicketCreate {
   tracking_code: string | null;
   message: string;
 }
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+  sender_name: string | null;
+}
+
+export interface NotificationList {
+  items: NotificationItem[];
+  unread: number;
+}
+
+export interface AdminNotificationRow extends NotificationItem {
+  recipient_id: string;
+  recipient_name: string;
+  recipient_email: string;
+  recipient_role: "admin" | "reseller";
+}
+
+export type NotificationAudience = "all" | "resellers" | "selected";
+
+export interface NotificationSendInput {
+  title: string;
+  body: string;
+  audience: NotificationAudience;
+  recipient_ids?: string[];
+}
+
+export interface NotificationSendResult {
+  created: number;
+}
