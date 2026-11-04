@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { BookUser, ChevronDown, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Search, ShieldCheck, Tags, Users } from "lucide-react";
+import { BookUser, ChevronDown, Headset, LifeBuoy, LogOut, Package, Calculator, LayoutDashboard, Receipt, Search, ShieldCheck, Tags, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BrandLogo } from "@/components/brand";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: "/admin/nuova-spedizione", label: "Nuova spedizione", icon: Calculator, testId: "nav-admin-new-shipment", hint: "Spedisci e decidi il ricarico" },
   { to: "/admin/spedizioni", label: "Spedizioni effettuate", icon: Package, testId: "nav-admin-shipments", hint: "Elenco ed etichette PDF" },
   { to: "/admin/cerca", label: "Cerca spedizione", icon: Search, testId: "nav-admin-search", hint: "MUVPACK e TravelBox" },
+  { to: "/admin/addebiti", label: "Addebiti", icon: Receipt, testId: "nav-admin-charges", hint: "Addebiti manuali sui profili" },
   { to: "/admin/clienti", label: "Clienti B2B", icon: Users, testId: "nav-admin-clients", hint: "Clienti, saldi e stati" },
   { to: "/admin/listini", label: "Listini e ricarichi", icon: Tags, testId: "nav-admin-rate-lists", hint: "Listini TravelBox e margini clienti" },
   { to: "/admin/rubrica", label: "Rubrica destinatari", icon: BookUser, testId: "nav-admin-contacts", hint: "Aggiungi, modifica, elimina" },

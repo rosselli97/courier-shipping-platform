@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
@@ -22,6 +22,8 @@ from ..pricing import (
 from ..schemas import (
     AdminKpis,
     AdminMonth,
+    AdminChargeBody,
+    AdminChargeResponse,
     AdminScopeKpis,
     AdminWallet,
     AdminWalletTopupBody,
@@ -179,6 +181,92 @@ def topup_admin_wallet(
     db.commit()
     db.refresh(user)
     return _admin_wallet(user, db)
+
+
+def _find_shipment_for_charge(db: Session, code: str) -> tuple[Shipment | None, str | None]:
+    shipment = db.scalar(select(Shipment).where(Shipment.tracking_code == code))
+    if shipment is not None:
+        return shipment, None
+
+    from travelbox.api import get_client
+
+    from ..travelbox_quotes import client_lock
+
+    today = date.today()
+    start = date(today.year - 3, 1, 1).isoformat()
+    end = (today + timedelta(days=1)).isoformat()
+    remote_ref: str | None = None
+    with client_lock:
+        client = get_client()
+        for filters in ({"numero_interno": code}, {"tracking": code}):
+            rows = client.shipments(page=1, data_dal=start, data_al=end, **filters)
+            for row in rows:
+                if row.reference:
+                    remote_ref = row.reference.strip().upper()
+                    break
+            if remote_ref:
+                break
+    if remote_ref is None:
+        return None, None
+    local = db.scalar(select(Shipment).where(Shipment.tracking_code == remote_ref))
+    if local is not None:
+        return local, None
+    return None, remote_ref
+
+
+@router.post("/charges", response_model=AdminChargeResponse)
+def apply_charge(
+    body: AdminChargeBody,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    code = body.code.strip().upper()
+    try:
+        shipment, remote_ref = _find_shipment_for_charge(db, code)
+    except Exception:
+        logger.exception("Addebito: ricerca spedizione non riuscita")
+        raise HTTPException(status_code=502, detail="Ricerca spedizione non disponibile")
+    if shipment is None:
+        if remote_ref:
+            raise HTTPException(
+                status_code=404,
+                detail="Spedizione presente su TravelBox ma non associata a un profilo MUVPACK",
+            )
+        raise HTTPException(status_code=404, detail="Spedizione non trovata")
+
+    owner = db.get(User, shipment.owner_id)
+    if owner is None:
+        raise HTTPException(status_code=404, detail="Profilo proprietario non trovato")
+
+    amount = round(body.amount, 2)
+    previous = round(owner.wallet_balance, 2)
+    owner.wallet_balance = round(previous - amount, 2)
+    note = body.note or f"Addebito spedizione {shipment.tracking_code}"
+    db.add(
+        WalletTx(
+            user_id=owner.id,
+            type="admin_adjust",
+            amount=-amount,
+            ref=shipment.tracking_code,
+            note=note,
+            balance_after=owner.wallet_balance,
+        )
+    )
+    db.commit()
+    db.refresh(owner)
+    return AdminChargeResponse(
+        shipment_id=shipment.id,
+        tracking_code=shipment.tracking_code,
+        recipient_name=shipment.recipient_name,
+        owner_id=owner.id,
+        owner_name=owner.company_name,
+        owner_email=owner.email,
+        owner_role=owner.role,
+        amount=amount,
+        previous_balance=previous,
+        new_balance=round(owner.wallet_balance, 2),
+        note=note,
+    )
 
 
 @router.get("/clients", response_model=list[ClientRow])

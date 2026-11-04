@@ -269,6 +269,26 @@ export interface ShipmentSearchResponse {
   notice: string | null;
 }
 
+export interface AdminChargeInput {
+  code: string;
+  amount: number;
+  note?: string | null;
+}
+
+export interface AdminChargeResult {
+  shipment_id: string;
+  tracking_code: string;
+  recipient_name: string;
+  owner_id: string;
+  owner_name: string;
+  owner_email: string;
+  owner_role: string;
+  amount: number;
+  previous_balance: number;
+  new_balance: number;
+  note: string | null;
+}
+
 export interface ClientRow {
   id: string;
   email: string;

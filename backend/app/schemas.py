@@ -249,6 +249,26 @@ class ShipmentSearchResponse(BaseModel):
     notice: str | None = None
 
 
+class AdminChargeBody(BaseModel):
+    code: str = Field(min_length=2)
+    amount: float = Field(gt=0)
+    note: str | None = None
+
+
+class AdminChargeResponse(BaseModel):
+    shipment_id: str
+    tracking_code: str
+    recipient_name: str
+    owner_id: str
+    owner_name: str
+    owner_email: str
+    owner_role: str
+    amount: float
+    previous_balance: float
+    new_balance: float
+    note: str | None = None
+
+
 class MarkupRule(BaseModel):
     courier: CourierId
     type: MarkupType
