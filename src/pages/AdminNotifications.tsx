@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCheck, Loader2, Send, Users } from "lucide-react";
+import { Bell, CheckCheck, Inbox, Loader2, Send, Users } from "lucide-react";
 import { toast } from "sonner";
 import DashboardShell from "@/components/DashboardShell";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -75,8 +76,17 @@ export default function AdminNotifications() {
   return (
     <DashboardShell
       role="admin"
-      title="Notifiche"
+      title="Gestione notifiche"
       subtitle="Invia comunicazioni ai profili e controlla chi ha letto le notifiche."
+      actions={
+        <Link
+          to="/notifiche"
+          data-testid="admin-notifications-inbox-link"
+          className={cn(buttonVariants({ variant: "outline" }), "h-11 gap-2")}
+        >
+          <Inbox className="size-4" /> Le mie notifiche
+        </Link>
+      }
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,440px)_1fr] xl:items-start">
         <form

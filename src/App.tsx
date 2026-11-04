@@ -16,7 +16,8 @@ import AdminNotifications from "@/pages/AdminNotifications";
 import AdminRateLists from "@/pages/AdminRateLists";
 import AddressBook from "@/pages/AddressBook";
 import Support from "@/pages/Support";
-import { RequireRole } from "@/components/DashboardShell";
+import Notifications from "@/pages/Notifications";
+import { RequireAuth, RequireRole } from "@/components/DashboardShell";
 
 // One <Route> per page in src/pages; BrowserRouter already wraps this in main.tsx.
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/traccia/:code" element={<Tracking />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registrati" element={<Signup />} />
+        <Route path="/notifiche" element={<RequireAuth><Notifications /></RequireAuth>} />
         <Route path="/dashboard" element={<RequireRole role="reseller"><ResellerDashboard /></RequireRole>} />
         <Route path="/admin" element={<RequireRole role="admin"><AdminDashboard /></RequireRole>} />
         <Route path="/admin/nuova-spedizione" element={<RequireRole role="admin"><AdminNewShipment /></RequireRole>} />
