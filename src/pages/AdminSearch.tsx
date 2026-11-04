@@ -7,17 +7,40 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiGet } from "@/lib/api";
 import { eur, errorMessage } from "@/lib/format";
-import type { ShipmentSearchResponse } from "@/lib/types";
+import type { ShipmentSearchResponse, ShipmentSearchResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function AdminSearch() {
   const [params, setParams] = useSearchParams();
   const q = (params.get("q") ?? "").trim();
   const [term, setTerm] = useState(q);
+  const [open, setOpen] = useState(false);
+  const [lookup, setLookup] = useState("");
 
   useEffect(() => {
     setTerm(q);
   }, [q]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLookup(term.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [term]);
+
+  const suggestions = useQuery({
+    queryKey: ["admin", "shipment-search-suggest", lookup],
+    queryFn: () => apiGet<ShipmentSearchResponse>(`/admin/shipment-search?q=${encodeURIComponent(lookup)}`),
+    enabled: lookup.length >= 2,
+    staleTime: 30_000,
+    retry: false,
+  });
+  const suggestionList = (suggestions.data?.results ?? []).slice(0, 8);
+
+  const selectSuggestion = (item: ShipmentSearchResult) => {
+    const value = item.reference || item.tracking_code || item.tracking_number || "";
+    setTerm(value);
+    setParams({ q: value });
+    setOpen(false);
+  };
 
   const search = useQuery({
     queryKey: ["admin", "shipment-search", q],
@@ -40,7 +63,7 @@ export default function AdminSearch() {
         onSubmit={(e) => {
           e.preventDefault();
           const value = term.trim();
-          if (value.length >= 2) setParams({ q: value });
+          if (value.length >= 2) { setParams({ q: value }); setOpen(false); }
         }}
       >
         <div className="relative flex-1">
@@ -48,10 +71,43 @@ export default function AdminSearch() {
           <Input
             data-testid="shipment-search-input"
             value={term}
-            onChange={(e) => setTerm(e.target.value)}
+            onChange={(e) => { setTerm(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
             placeholder="Es. TBC-40226, MVP20260001, tracking o nome destinatario"
             className="h-12 pl-10 text-base"
           />
+          {open && lookup.length >= 2 && (
+            <div data-testid="shipment-search-suggestions" className="absolute left-0 right-0 top-full z-40 mt-1 max-h-72 overflow-auto rounded-xl border bg-white shadow-lg">
+              {suggestions.isFetching ? (
+                <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Ricerca...
+                </div>
+              ) : suggestionList.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-muted-foreground">Nessuna spedizione trovata.</p>
+              ) : (
+                suggestionList.map((item, index) => (
+                  <button
+                    key={`${item.source}-${item.reference ?? item.tracking_number ?? index}`}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectSuggestion(item)}
+                    className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <span className="flex w-full items-center justify-between gap-2">
+                      <span className="font-mono font-semibold text-navy">{item.reference || item.tracking_code || item.tracking_number}</span>
+                      <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide", item.source === "muvpack" ? "bg-navy text-white" : "bg-brand-soft text-brand")}>
+                        {item.source === "muvpack" ? "MUVPACK" : "TravelBox"}
+                      </span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {[item.status, item.recipient_name, item.origin_city && item.dest_city ? `${item.origin_city} → ${item.dest_city}` : null].filter(Boolean).join(" · ") || "Dettagli non disponibili"}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
         <Button type="submit" disabled={term.trim().length < 2} className="h-12 gap-2 bg-brand px-6 font-semibold text-white hover:bg-brand-hover">
           <Search className="size-4" /> Cerca
