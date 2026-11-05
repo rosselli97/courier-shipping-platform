@@ -106,7 +106,7 @@ def effective_rate_markup(
     """Ricarico effettivo di un listino per un cliente.
 
     Ordine: override del cliente sul listino -> ricarico standard del listino
-    -> ricarico per corriere (comportamento precedente).
+    -> nessun ricarico.
     """
     if list_id:
         if user is not None:
@@ -126,7 +126,7 @@ def effective_rate_markup(
         )
         if row is not None:
             return (row.type, row.value)
-    return effective_markups(db, user).get(courier, ("percent", 0.0))
+    return ("percent", 0.0)
 
 
 def pallet_price(db: Session, courier: str, zone: int) -> float:

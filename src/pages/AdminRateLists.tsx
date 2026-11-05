@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Percent, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import DashboardShell from "@/components/DashboardShell";
-import MarkupRules from "@/components/MarkupRules";
 import PalletRates from "@/components/PalletRates";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -416,7 +415,7 @@ function Editor({
                       min="0"
                       step="0.5"
                       value={row.standardValue}
-                      placeholder="fallback"
+                      placeholder="0"
                       onChange={(event) => update(row.list.id, { standardValue: event.target.value })}
                       className="h-8 w-20 text-right font-mono"
                     />
@@ -471,14 +470,16 @@ function Editor({
                             min="0"
                             step="0.5"
                             value={row.customValue}
-                            placeholder={row.standardValue ? `standard ${row.standardValue}` : "standard corriere"}
+                            placeholder={row.standardValue ? `standard ${row.standardValue}` : "nessun ricarico"}
                             onChange={(event) => update(row.list.id, { customValue: event.target.value })}
                             className="h-8 w-24 text-right font-mono"
                           />
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          Usa lo standard{row.standardValue ? ` (${row.standardValue})` : " del listino"}.
+                          {row.standardValue
+                            ? `Usa lo standard (${row.standardValue}).`
+                            : "Nessun ricarico standard."}
                         </p>
                       )}
                     </div>
@@ -580,7 +581,6 @@ export default function AdminRateLists() {
       }
     >
       <div className="space-y-5">
-        <MarkupRules />
         <PalletRates />
         <section className="rounded-2xl border bg-card p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -591,7 +591,7 @@ export default function AdminRateLists() {
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Seleziona un cliente per un ricarico dedicato per listino. Se il campo standard è
-                vuoto si usa il ricarico per corriere già configurato.
+                vuoto il listino non applica alcun ricarico.
               </p>
             </div>
             <div className="w-full sm:w-72">

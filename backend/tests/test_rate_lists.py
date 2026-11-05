@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from travelbox.models import Money, Offer, RateList, RateRow
 
 from app.database import Base
-from app.models import MarkupRule, TravelBoxRateList, TravelBoxRateRow, User
+from app.models import TravelBoxRateList, TravelBoxRateRow, User
 from app.pricing import effective_rate_markup
 from app.rate_lists import (
     import_rate_lists,
@@ -97,7 +97,7 @@ def test_import_rate_lists_replaces_rows_and_keeps_active_flag():
     db.close()
 
 
-def test_rate_list_markups_standard_client_and_fallback():
+def test_rate_list_markups_standard_and_client():
     db = _session()
     client = FakeClient()
     import_rate_lists(db, client=client)
@@ -115,9 +115,7 @@ def test_rate_list_markups_standard_client_and_fallback():
     assert effective_rate_markup(db, admin, "100", "brt") == ("percent", 10.0)
 
     set_rate_list_markups(db, None, [])
-    db.add(MarkupRule(client_id=None, courier="brt", type="percent", value=5))
-    db.commit()
-    assert effective_rate_markup(db, None, "100", "brt") == ("percent", 5.0)
+    assert effective_rate_markup(db, None, "100", "brt") == ("percent", 0.0)
     assert effective_rate_markup(db, reseller, "100", "brt") == ("fixed", 2.5)
     db.close()
 
