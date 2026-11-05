@@ -147,17 +147,59 @@ function PriceDialog({ list, onClose }: { list: RateList | null; onClose: () => 
 function Editor({
   lists,
   clientId,
+  clientName,
   onSaved,
 }: {
   lists: RateList[];
   clientId: string;
+  clientName?: string;
   onSaved: () => void;
 }) {
   const [rows, setRows] = useState<Row[]>(() => rowsFromLists(lists));
   const [detailFor, setDetailFor] = useState<RateList | null>(null);
+  const [quickStandardType, setQuickStandardType] = useState<MarkupType>("percent");
+  const [quickStandardValue, setQuickStandardValue] = useState("");
+  const [quickClientType, setQuickClientType] = useState<MarkupType>("percent");
+  const [quickClientValue, setQuickClientValue] = useState("");
 
   const update = (id: string, patch: Partial<Row>) =>
     setRows((current) => current.map((row) => (row.list.id === id ? { ...row, ...patch } : row)));
+
+  const applyStandardToAll = () => {
+    if (quickStandardValue.trim() === "") {
+      toast.error("Inserisci il valore del ricarico standard");
+      return;
+    }
+    setRows((current) =>
+      current.map((row) => ({
+        ...row,
+        standardType: quickStandardType,
+        standardValue: quickStandardValue,
+      })),
+    );
+    toast.success(`Ricarico standard ${quickStandardType === "percent" ? "%" : "€"} applicato a tutti i listini`);
+  };
+
+  const applyClientToAll = () => {
+    if (quickClientValue.trim() === "") {
+      toast.error("Inserisci il valore del ricarico cliente");
+      return;
+    }
+    setRows((current) =>
+      current.map((row) => ({
+        ...row,
+        custom: true,
+        customType: quickClientType,
+        customValue: quickClientValue,
+      })),
+    );
+    toast.success(`Ricarico cliente applicato a tutti i listini`);
+  };
+
+  const clearCustom = () => {
+    setRows((current) => current.map((row) => ({ ...row, custom: false })));
+    toast.success("Personalizzazioni rimosse: torna il ricarico standard");
+  };
 
   const toggleActive = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
@@ -207,8 +249,110 @@ function Editor({
 
   return (
     <>
+      <section data-testid="rate-lists-quick-markup" className="mb-4 rounded-2xl border bg-slate-50/80 p-4">
+        <div className="flex flex-col gap-1">
+          <p className="flex items-center gap-2 text-sm font-semibold text-navy">
+            <Percent className="size-4 text-brand" /> Ricarico rapido
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Applica lo stesso ricarico a tutti i listini in un clic, poi salva. Ogni riga può restare
+            standard o diventare personalizzata.
+          </p>
+        </div>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          <div className="rounded-xl border bg-white p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Standard · tutti i clienti
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Select
+                value={quickStandardType}
+                onValueChange={(value: string) => setQuickStandardType(value as MarkupType)}
+              >
+                <SelectTrigger data-testid="quick-standard-type" className="h-9 w-32">
+                  <SelectValue>{(value) => TYPE_LABEL[value as MarkupType]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percent">Percentuale %</SelectItem>
+                  <SelectItem value="fixed">Fisso €</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                min="0"
+                step="0.5"
+                value={quickStandardValue}
+                onChange={(event) => setQuickStandardValue(event.target.value)}
+                placeholder="Es. 12"
+                aria-label="Valore ricarico standard rapido"
+                data-testid="quick-standard-value"
+                className="h-9 w-24 text-right font-mono"
+              />
+              <Button
+                type="button"
+                data-testid="quick-standard-apply"
+                onClick={applyStandardToAll}
+                className="h-9 bg-navy px-3 text-white hover:bg-navy-light"
+              >
+                Applica a tutti
+              </Button>
+            </div>
+          </div>
+
+          {clientId && (
+            <div className="rounded-xl border bg-white p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Personalizzato{clientName ? ` · ${clientName}` : ""}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Select
+                  value={quickClientType}
+                  onValueChange={(value: string) => setQuickClientType(value as MarkupType)}
+                >
+                  <SelectTrigger data-testid="quick-client-type" className="h-9 w-32">
+                    <SelectValue>{(value) => TYPE_LABEL[value as MarkupType]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">Percentuale %</SelectItem>
+                    <SelectItem value="fixed">Fisso €</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={quickClientValue}
+                  onChange={(event) => setQuickClientValue(event.target.value)}
+                  placeholder="Es. 8"
+                  aria-label="Valore ricarico cliente rapido"
+                  data-testid="quick-client-value"
+                  className="h-9 w-24 text-right font-mono"
+                />
+                <Button
+                  type="button"
+                  data-testid="quick-client-apply"
+                  onClick={applyClientToAll}
+                  className="h-9 bg-brand px-3 text-white hover:bg-brand-hover"
+                >
+                  Applica a tutti
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  data-testid="quick-client-clear"
+                  onClick={clearCustom}
+                  className="h-9 text-xs text-slate-600"
+                >
+                  Togli personalizzazioni
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
       <div className="overflow-x-auto rounded-2xl border bg-card shadow-sm">
-        <Table className="min-w-[980px]">
+        <Table className="min-w-[1080px]">
           <TableHeader className="bg-slate-50">
             <TableRow>
               <TableHead className="w-16">Attivo</TableHead>
@@ -216,7 +360,7 @@ function Editor({
               <TableHead>Validità</TableHead>
               <TableHead>Fasce</TableHead>
               <TableHead className="w-60">Ricarico standard</TableHead>
-              {clientId && <TableHead className="w-72">Ricarico cliente</TableHead>}
+              {clientId && <TableHead className="w-80">Ricarico cliente</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -280,38 +424,63 @@ function Editor({
                 </TableCell>
                 {clientId && (
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={row.custom}
-                        onCheckedChange={(checked) =>
-                          update(row.list.id, { custom: checked === true })
-                        }
-                        aria-label={`Personalizza ${row.list.name}`}
-                      />
-                      <Select
-                        value={row.customType}
-                        onValueChange={(value: string) =>
-                          update(row.list.id, { customType: value as MarkupType })
-                        }
-                        disabled={!row.custom}
-                      >
-                        <SelectTrigger className="h-8 w-32">
-                          <SelectValue>{(value) => TYPE_LABEL[value as MarkupType]}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percent">Percentuale %</SelectItem>
-                          <SelectItem value="fixed">Fisso €</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        value={row.customValue}
-                        disabled={!row.custom}
-                        onChange={(event) => update(row.list.id, { customValue: event.target.value })}
-                        className="h-8 w-20 text-right font-mono"
-                      />
+                    <div className="space-y-2">
+                      <div className="inline-flex rounded-lg border bg-white p-0.5">
+                        <button
+                          type="button"
+                          data-testid={`rate-list-${row.list.id}-standard`}
+                          onClick={() => update(row.list.id, { custom: false })}
+                          className={cn(
+                            "rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
+                            !row.custom ? "bg-navy text-white" : "text-slate-600 hover:bg-slate-100",
+                          )}
+                        >
+                          Standard
+                        </button>
+                        <button
+                          type="button"
+                          data-testid={`rate-list-${row.list.id}-custom`}
+                          onClick={() => update(row.list.id, { custom: true })}
+                          className={cn(
+                            "rounded-md px-2.5 py-1 text-xs font-semibold transition-colors",
+                            row.custom ? "bg-brand text-white" : "text-slate-600 hover:bg-slate-100",
+                          )}
+                        >
+                          Personalizzato
+                        </button>
+                      </div>
+
+                      {row.custom ? (
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={row.customType}
+                            onValueChange={(value: string) =>
+                              update(row.list.id, { customType: value as MarkupType })
+                            }
+                          >
+                            <SelectTrigger className="h-8 w-32">
+                              <SelectValue>{(value) => TYPE_LABEL[value as MarkupType]}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percent">Percentuale %</SelectItem>
+                              <SelectItem value="fixed">Fisso €</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={row.customValue}
+                            placeholder={row.standardValue ? `standard ${row.standardValue}` : "standard corriere"}
+                            onChange={(event) => update(row.list.id, { customValue: event.target.value })}
+                            className="h-8 w-24 text-right font-mono"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Usa lo standard{row.standardValue ? ` (${row.standardValue})` : " del listino"}.
+                        </p>
+                      )}
                     </div>
                   </TableCell>
                 )}
@@ -480,6 +649,7 @@ export default function AdminRateLists() {
             key={`${clientId || "standard"}-${lists.dataUpdatedAt}`}
             lists={lists.data ?? []}
             clientId={clientId}
+            clientName={selectedClient?.company_name}
             onSaved={() => void qc.invalidateQueries({ queryKey: ["admin", "rate-lists"] })}
           />
         )}
