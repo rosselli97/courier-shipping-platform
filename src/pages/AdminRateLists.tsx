@@ -214,33 +214,27 @@ function Editor({
     onError: (error) => toast.error(errorMessage(error)),
   });
 
-  const saveStandard = useMutation({
-    mutationFn: () =>
-      apiPut<RateList[]>("/travelbox/rate-lists/markups", {
+  const saveAll = useMutation({
+    mutationFn: async () => {
+      await apiPut<RateList[]>("/travelbox/rate-lists/markups", {
         client_id: null,
         rules: rulesPayload(
           rows.map((row) => ({ list: row.list, type: row.standardType, value: row.standardValue })),
         ),
-      }),
-    onSuccess: () => {
-      toast.success("Ricarichi standard salvati");
-      onSaved();
+      });
+      if (clientId) {
+        await apiPut<RateList[]>("/travelbox/rate-lists/markups", {
+          client_id: clientId,
+          rules: rulesPayload(
+            rows
+              .filter((row) => row.custom)
+              .map((row) => ({ list: row.list, type: row.customType, value: row.customValue })),
+          ),
+        });
+      }
     },
-    onError: (error) => toast.error(errorMessage(error)),
-  });
-
-  const saveClient = useMutation({
-    mutationFn: () =>
-      apiPut<RateList[]>("/travelbox/rate-lists/markups", {
-        client_id: clientId,
-        rules: rulesPayload(
-          rows
-            .filter((row) => row.custom)
-            .map((row) => ({ list: row.list, type: row.customType, value: row.customValue })),
-        ),
-      }),
     onSuccess: () => {
-      toast.success("Ricarico cliente salvato");
+      toast.success(clientId ? "Ricarico standard e cliente salvati" : "Ricarichi standard salvati");
       onSaved();
     },
     onError: (error) => toast.error(errorMessage(error)),
@@ -491,27 +485,22 @@ function Editor({
         </Table>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <p className="text-xs text-muted-foreground sm:mr-auto">
+          {clientId
+            ? "Vengono salvati sia il ricarico standard sia quello personalizzato del cliente."
+            : "Viene salvato il ricarico standard dei listini."}
+        </p>
         <Button
           type="button"
-          onClick={() => saveStandard.mutate()}
-          disabled={saveStandard.isPending}
-          className="bg-navy text-white hover:bg-navy-light"
+          data-testid="rate-lists-save-all"
+          onClick={() => saveAll.mutate()}
+          disabled={saveAll.isPending}
+          className="bg-brand font-semibold text-white hover:bg-brand-hover"
         >
-          {saveStandard.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Salva ricarichi standard
+          {saveAll.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+          Salva modifiche
         </Button>
-        {clientId && (
-          <Button
-            type="button"
-            onClick={() => saveClient.mutate()}
-            disabled={saveClient.isPending}
-            className="bg-brand text-white hover:bg-brand-hover"
-          >
-            {saveClient.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Salva ricarico cliente
-          </Button>
-        )}
       </div>
 
       <PriceDialog key={detailFor?.id ?? "none"} list={detailFor} onClose={() => setDetailFor(null)} />
@@ -624,6 +613,12 @@ export default function AdminRateLists() {
             {importedAt && <span>Ultimo import: {importedAt}</span>}
             {selectedClient && <span>Cliente: {selectedClient.company_name}</span>}
           </div>
+          {clientId && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Il ricarico personalizzato vale per i nuovi preventivi e le nuove spedizioni
+              dell'account selezionato. Non modifica le spedizioni già create.
+            </p>
+          )}
         </section>
 
         {lists.isPending ? (
@@ -650,7 +645,10 @@ export default function AdminRateLists() {
             lists={lists.data ?? []}
             clientId={clientId}
             clientName={selectedClient?.company_name}
-            onSaved={() => void qc.invalidateQueries({ queryKey: ["admin", "rate-lists"] })}
+            onSaved={() => {
+              void qc.invalidateQueries({ queryKey: ["admin", "rate-lists"] });
+              void qc.invalidateQueries({ queryKey: ["quote"] });
+            }}
           />
         )}
       </div>
