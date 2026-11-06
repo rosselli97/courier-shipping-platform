@@ -243,14 +243,26 @@ function Editor({
   return (
     <>
       <section data-testid="rate-lists-quick-markup" className="mb-4 rounded-2xl border bg-slate-50/80 p-4">
-        <div className="flex flex-col gap-1">
-          <p className="flex items-center gap-2 text-sm font-semibold text-navy">
-            <Percent className="size-4 text-brand" /> Ricarico rapido
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Applica lo stesso ricarico a tutti i listini in un clic, poi salva. Ogni riga può restare
-            standard o diventare personalizzata.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <p className="flex items-center gap-2 text-sm font-semibold text-navy">
+              <Percent className="size-4 text-brand" /> Ricarico rapido
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Applica lo stesso ricarico a tutti i listini in un clic, poi premi Salva modifiche.
+              Ogni riga può restare standard o diventare personalizzata.
+            </p>
+          </div>
+          <Button
+            type="button"
+            data-testid="rate-lists-quick-save"
+            onClick={() => saveAll.mutate()}
+            disabled={saveAll.isPending}
+            className="h-9 shrink-0 bg-brand px-4 font-semibold text-white hover:bg-brand-hover"
+          >
+            {saveAll.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            Salva modifiche
+          </Button>
         </div>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">
           <div className="rounded-xl border bg-white p-3">
