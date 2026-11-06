@@ -52,9 +52,9 @@ export default function Couriers() {
         className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center overflow-hidden"
       >
         <img
-          src="/brand/logo-navy.png"
+          src="/brand/icon.png"
           alt=""
-          className="w-[92vw] max-w-[1100px] select-none opacity-[0.10]"
+          className="w-[95vw] max-w-[1200px] select-none opacity-[0.10]"
         />
       </div>
       <div className="relative z-10 border-b bg-white">
