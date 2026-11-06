@@ -49,12 +49,12 @@ export default function Couriers() {
     <div className="relative min-h-screen bg-page">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-0 flex justify-center overflow-hidden"
+        className="pointer-events-none fixed bottom-6 right-6 z-0 hidden select-none lg:block"
       >
         <img
           src="/brand/logo-navy.png"
           alt=""
-          className="w-[min(75vw,480px)] translate-y-[35%] select-none opacity-[0.07]"
+          className="w-72 opacity-[0.12]"
         />
       </div>
       <div className="relative z-10 border-b bg-white">
