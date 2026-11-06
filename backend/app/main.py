@@ -5,10 +5,12 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from travelbox.api import app as travelbox_app
 
@@ -119,3 +121,23 @@ app.mount("/api/travelbox", travelbox_app)
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+STATIC_DIR = Path(
+    os.getenv("MUVPACK_STATIC_DIR", str(Path(__file__).resolve().parent.parent / "static"))
+)
+
+if STATIC_DIR.is_dir():
+    static_root = STATIC_DIR.resolve()
+    assets_dir = static_root / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa_fallback(full_path: str):
+        if full_path == "api" or full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+        candidate = (static_root / full_path).resolve()
+        if candidate.is_file() and static_root in candidate.parents:
+            return FileResponse(candidate)
+        return FileResponse(static_root / "index.html")
