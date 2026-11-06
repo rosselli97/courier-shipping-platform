@@ -46,11 +46,21 @@ export default function Couriers() {
   };
 
   return (
-    <div className="min-h-screen bg-page">
-      <div className="border-b bg-white">
+    <div className="relative min-h-screen bg-page">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-0 flex justify-center overflow-hidden"
+      >
+        <img
+          src="/brand/logo-navy.png"
+          alt=""
+          className="w-[min(75vw,480px)] translate-y-[35%] select-none opacity-[0.07]"
+        />
+      </div>
+      <div className="relative z-10 border-b bg-white">
         <PublicHeader />
       </div>
-      <main className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
+      <main className="relative z-10 mx-auto max-w-2xl px-4 py-6 sm:py-10">
         <Link to="/" data-testid="couriers-back-link" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-navy">
           <ArrowLeft className="size-4" /> Modifica pacco
         </Link>
